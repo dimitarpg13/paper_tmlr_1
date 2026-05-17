@@ -33,9 +33,66 @@ from model import ScalarPotentialLM, SPLMConfig
 from trajectory_types import Trajectory
 
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_BUNDLED_LOGFREQ = _REPO_ROOT / "data" / "logfreq_surprisal.npy"
+
+
+def load_splm_any_variant(ckpt_path: Path, device: str):
+    """Variant-aware loader for SPLM checkpoints.
+
+    Dispatches on ``ck['variant']``:
+
+      - ``'sarf_mass_ln'`` -> ScalarPotentialLMSARFMassLN (LN-after-step +
+        per-token logfreq mass; this is the leak-corrected positive
+        control used in paper_tmlr_1 §A.3).
+      - default            -> ScalarPotentialLM (the plain shared-V_theta
+        flow from model.py).
+
+    For ``sarf_mass_ln`` checkpoints we override the embedded
+    ``logfreq_path`` (which is the absolute path the upstream training
+    job was launched from) with the bundled
+    ``data/logfreq_surprisal.npy``, so the same checkpoint loads
+    unchanged across machines (Colab VMs, CI, contributor laptops).
+    """
+    ck = torch.load(ckpt_path, map_location=device, weights_only=False)
+    variant = ck.get("variant", "splm")
+    cfg_dict = dict(ck["model_cfg"])
+
+    if variant == "sarf_mass_ln":
+        from model_ln import ScalarPotentialLMSARFMassLN, SPLMSARFMassLNConfig
+        if cfg_dict.get("mass_mode") == "logfreq":
+            cfg_dict["logfreq_path"] = str(_BUNDLED_LOGFREQ)
+            if not _BUNDLED_LOGFREQ.exists():
+                raise FileNotFoundError(
+                    f"mass_mode='logfreq' checkpoint needs the bundled "
+                    f"surprisal table at {_BUNDLED_LOGFREQ}, but it is "
+                    f"missing. Regenerate via "
+                    f"semsimula/notebooks/conservative_arch/"
+                    f"sarf_mass_variant/compute_unigram_frequencies.py."
+                )
+        cfg = SPLMSARFMassLNConfig(**cfg_dict)
+        model = ScalarPotentialLMSARFMassLN(cfg).to(device)
+    elif variant == "sarf_mass":
+        from model_sarf_mass import (
+            ScalarPotentialLMSARFMass,
+            SPLMSARFMassConfig,
+        )
+        if cfg_dict.get("mass_mode") == "logfreq":
+            cfg_dict["logfreq_path"] = str(_BUNDLED_LOGFREQ)
+        cfg = SPLMSARFMassConfig(**cfg_dict)
+        model = ScalarPotentialLMSARFMass(cfg).to(device)
+    else:
+        cfg = SPLMConfig(**cfg_dict)
+        model = ScalarPotentialLM(cfg).to(device)
+
+    model.load_state_dict(ck["model_state_dict"])
+    model.eval()
+    return model, cfg, variant, ck
+
+
 @torch.no_grad()
 def extract_one(
-    model: ScalarPotentialLM,
+    model,
     tokenizer,
     sentence: str,
     domain: str,
@@ -92,13 +149,11 @@ def main():
     )
     print(f"[extract] device={device}  ckpt={args.ckpt}")
 
-    ck = torch.load(args.ckpt, map_location=device, weights_only=False)
-    model_cfg = SPLMConfig(**ck["model_cfg"])
-    model = ScalarPotentialLM(model_cfg).to(device)
-    model.load_state_dict(ck["model_state_dict"])
-    model.eval()
-    print(f"[extract] loaded model with d={model_cfg.d}  L={model_cfg.L}  "
-          f"max_len={model_cfg.max_len}")
+    model, model_cfg, variant, ck = load_splm_any_variant(
+        Path(args.ckpt), device,
+    )
+    print(f"[extract] loaded model  variant={variant}  d={model_cfg.d}  "
+          f"L={model_cfg.L}  max_len={model_cfg.max_len}")
 
     from transformers import AutoTokenizer
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
@@ -129,6 +184,7 @@ def main():
             "model_cfg": ck["model_cfg"],
             "d": model_cfg.d,
             "L": model_cfg.L,
+            "variant": variant,
         }, f)
     print(f"[extract] saved -> {out_path}")
 
