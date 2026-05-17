@@ -77,8 +77,18 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(args.model).to(device)
     model.eval()
 
-    d  = model.config.n_embd
-    L  = model.config.n_layer
+    # GPT-2 uses (n_embd, n_layer); GPTNeoX / Pythia uses (hidden_size,
+    # num_hidden_layers); other HF families occasionally differ again.
+    # Fall back through both naming conventions before giving up.
+    d = (getattr(model.config, "n_embd", None)
+         or getattr(model.config, "hidden_size", None))
+    L = (getattr(model.config, "n_layer", None)
+         or getattr(model.config, "num_hidden_layers", None))
+    if d is None or L is None:
+        raise RuntimeError(
+            f"could not determine d / L from {type(model.config).__name__}; "
+            f"expected one of (n_embd, n_layer) or (hidden_size, num_hidden_layers)."
+        )
     print(f"[extract-gpt2] d={d}  L={L}  (hidden_states: L+1={L+1})")
 
     rng = np.random.default_rng(args.seed)
