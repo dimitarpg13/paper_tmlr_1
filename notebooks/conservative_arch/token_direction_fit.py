@@ -285,6 +285,18 @@ def main():
     ap.add_argument("--device", default=None)
     ap.add_argument("--tag",    default=None)
     ap.add_argument("--seed",   type=int, default=0)
+    ap.add_argument(
+        "--emit-json", default=None,
+        help="If set, also write a paper-headline JSON with provenance + "
+             "per-layer shared-V_psi R^2 and per-layer velocity-aware "
+             "Jacobian-symmetry gap (token direction) at this path.",
+    )
+    ap.add_argument(
+        "--architecture-label", default=None,
+        help="Optional human-readable architecture label embedded in the "
+             "emitted JSON (e.g. 'splm_leakfree', 'gpt2_small', "
+             "'matched_attention_8M'). Defaults to the tag.",
+    )
     args = ap.parse_args()
 
     device = args.device or (
@@ -522,6 +534,90 @@ def main():
         f.write(f"- `tokdir_{tag}_results.npz`\n")
         f.write(f"- `tokdir_{tag}_fig.png`\n")
     print(f"[tok-dir] saved -> {md}")
+
+    if args.emit_json is not None:
+        from provenance import make_provenance, write_paper_json
+
+        layers_shv_list = [int(x) for x in layers_shv.tolist()]
+        per_layer_test = [float(r2_shv_te[int(ell)]) for ell in layers_shv_list]
+        per_layer_train = [float(r2_shv_tr[int(ell)]) for ell in layers_shv_list]
+        per_layer_vo_test = [float(r2_vo_te[int(ell)]) for ell in layers_shv_list]
+        per_layer_null_test = [float(r2_null_te[int(ell)]) for ell in layers_shv_list]
+        median_test = float(np.median(per_layer_test))
+        mean_test = float(np.mean(per_layer_test))
+        min_test = float(np.min(per_layer_test))
+
+        per_layer_jac = [{
+            "layer": int(p["layer"]),
+            "pos_only_test_full": float(p["r2_test_full_p"]),
+            "pos_only_test_sym": float(p["r2_test_sym_p"]),
+            "velocity_aware_test_full": float(p["r2_test_full_v"]),
+            "velocity_aware_test_sym": float(p["r2_test_sym_v"]),
+            "velocity_aware_test_gap": float(
+                p["r2_test_full_v"] - p["r2_test_sym_v"]
+            ),
+        } for p in per_layer]
+        jac_gap_max = float(max(
+            (q["velocity_aware_test_gap"] for q in per_layer_jac), default=float("nan")
+        ))
+
+        arch_label = args.architecture_label or tag
+        config = {
+            "fit": "token_direction_fit",
+            "architecture": arch_label,
+            "trajectory_path": str(traj_path),
+            "d": int(d),
+            "L": int(L),
+            "v_psi": {"hidden": int(args.hidden), "depth": int(args.depth)},
+            "optim": {
+                "name": "AdamW",
+                "steps": int(args.steps),
+                "batch": int(args.batch),
+                "lr": float(args.lr),
+            },
+            "pca_k": int(args.pca_k),
+            "ridge": float(args.ridge),
+            "t_skip": int(args.t_skip),
+        }
+        provenance = make_provenance(
+            script_path=Path(__file__),
+            config=config,
+            random_seed=int(args.seed),
+            checkpoint_path=None,
+        )
+        payload = {
+            "section": "paper_tmlr_1 \u00a79.3 (token-direction "
+                       "shared-V_psi fit + velocity-aware Jacobian symmetry)",
+            "architecture": arch_label,
+            "tag": tag,
+            "config": config,
+            "n_samples": {
+                "train": int(X_tr.shape[0]),
+                "test": int(X_te.shape[0]),
+            },
+            "shared_v_token_direction": {
+                "headline_r2": {
+                    "median_per_layer_test": median_test,
+                    "mean_per_layer_test": mean_test,
+                    "min_per_layer_test": min_test,
+                    "overall_pooled_train": float(r2_shv_tr_overall),
+                    "overall_pooled_test": float(r2_shv_te_overall),
+                },
+                "per_layer_r2": {
+                    "layers": layers_shv_list,
+                    "shared_v_test": per_layer_test,
+                    "shared_v_train": per_layer_train,
+                    "velocity_only_test": per_layer_vo_test,
+                    "static_null_test": per_layer_null_test,
+                },
+            },
+            "jacobian_symmetry_token_direction": {
+                "max_velocity_aware_test_gap": jac_gap_max,
+                "per_layer": per_layer_jac,
+            },
+        }
+        write_paper_json(Path(args.emit_json), provenance, payload)
+        print(f"[tok-dir] saved -> {args.emit_json}")
 
 
 if __name__ == "__main__":

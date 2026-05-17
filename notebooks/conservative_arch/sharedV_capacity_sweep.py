@@ -19,6 +19,7 @@ representational.
 
 from __future__ import annotations
 
+import argparse
 import json
 import subprocess
 import sys
@@ -79,6 +80,14 @@ def param_count(hidden: int, depth: int, d: int = 768) -> int:
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument(
+        "--emit-json", default=None,
+        help="If set, also write a paper-headline JSON with provenance + "
+             "per-cell per-layer R^2 + saturation summary at this path.",
+    )
+    args = ap.parse_args()
+
     if not TRAJ_PATH.exists():
         raise FileNotFoundError(f"Need GPT-2 trajectories at {TRAJ_PATH}")
 
@@ -208,6 +217,72 @@ def main():
         f.write("![per-layer](sharedV_capacity_sweep_per_layer.png)\n\n")
         f.write("![saturation](sharedV_capacity_sweep_saturation.png)\n\n")
     print(f"[sweep] saved -> {md}")
+
+    if args.emit_json is not None:
+        from provenance import make_provenance, write_paper_json
+
+        cells = []
+        for c in curves:
+            r2 = np.asarray(c["r2_shv_test"], dtype=float)
+            mid_mask = (np.asarray(c["layers"]) >= 5) & (np.asarray(c["layers"]) <= 10)
+            cells.append({
+                "hidden": int(c["cfg"]["hidden"]),
+                "depth": int(c["cfg"]["depth"]),
+                "steps": int(c["cfg"]["steps"]),
+                "tag": str(c["tag"]),
+                "n_params_v_psi": int(c["n_params"]),
+                "median_per_layer_test_r2": float(np.median(r2)),
+                "mean_per_layer_test_r2": float(np.mean(r2)),
+                "min_per_layer_test_r2": float(np.min(r2)),
+                "mean_test_r2_layers_5_to_10": (
+                    float(np.mean(r2[mid_mask])) if mid_mask.any() else None
+                ),
+                "per_layer_test_r2": [float(x) for x in r2.tolist()],
+                "per_layer_train_r2": [float(x) for x in
+                                       np.asarray(c["r2_shv_train"], dtype=float).tolist()],
+            })
+
+        config = {
+            "fit": "sharedV_capacity_sweep",
+            "trajectory_path": str(TRAJ_PATH),
+            "sweep_cells": [
+                {"hidden": int(c["cfg"]["hidden"]),
+                 "depth": int(c["cfg"]["depth"]),
+                 "steps": int(c["cfg"]["steps"])}
+                for c in curves
+            ],
+            "layers": [int(x) for x in curves[0]["layers"]],
+            "middle_layers_definition": "layers 5..10 (GPT-2 small mid-stack)",
+        }
+        provenance = make_provenance(
+            script_path=Path(__file__),
+            config=config,
+            random_seed=0,
+            checkpoint_path=None,
+        )
+        payload = {
+            "section": "paper_tmlr_1 \u00a79.2 (shared-V_psi capacity "
+                       "sweep on GPT-2 trajectories)",
+            "architecture": "gpt2_small",
+            "config": config,
+            "cells": cells,
+            "saturation_summary": {
+                "n_cells": len(cells),
+                "max_median_test_r2": float(
+                    max(c["median_per_layer_test_r2"] for c in cells)
+                ),
+                "max_mid_layer_test_r2": float(
+                    max((c["mean_test_r2_layers_5_to_10"] or 0.0)
+                        for c in cells)
+                ),
+                "conclusion": "Read the saturation as STRUCTURAL if "
+                              "max_mid_layer_test_r2 stays \\le 0.5 across "
+                              "the sweep; REPRESENTATIONAL if it crosses "
+                              "0.5 monotonically as capacity grows.",
+            },
+        }
+        write_paper_json(Path(args.emit_json), provenance, payload)
+        print(f"[sweep] saved -> {args.emit_json}")
 
 
 if __name__ == "__main__":

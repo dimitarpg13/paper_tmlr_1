@@ -186,6 +186,13 @@ def main():
     ap.add_argument("--ckpt", required=True)
     ap.add_argument("--device", default=None)
     ap.add_argument("--tag", default=None)
+    ap.add_argument("--seed", type=int, default=0,
+                    help="Seed for the train/test sentence split.")
+    ap.add_argument(
+        "--emit-json", default=None,
+        help="If set, also write a paper-headline JSON with provenance + "
+             "per-layer oracle R^2 at this path.",
+    )
     args = ap.parse_args()
 
     device = args.device or ("cuda" if torch.cuda.is_available()
@@ -200,7 +207,7 @@ def main():
     d = model.cfg.d
 
     sentences = []
-    rng = np.random.default_rng(0)
+    rng = np.random.default_rng(args.seed)
     for domain, arr in CORPUS.items():
         idx = rng.permutation(len(arr))
         train_idx = idx[:int(0.8 * len(arr))]
@@ -298,6 +305,58 @@ def main():
         f.write("\n![fig](splm_oracle_"
                 f"{tag}_fig.png)\n")
     print(f"[splm-oracle] saved -> {md}")
+
+    if args.emit_json is not None:
+        from provenance import make_provenance, write_paper_json
+
+        per_layer_test = [float(r2_te[ell]) for ell in layers]
+        per_layer_train = [float(r2_tr[ell]) for ell in layers]
+        median_test = float(np.median(per_layer_test))
+        mean_test = float(np.mean(per_layer_test))
+        min_test = float(np.min(per_layer_test))
+        max_test = float(np.max(per_layer_test))
+
+        config = {
+            "fit": "splm_oracle_fit",
+            "checkpoint": ckpt_path.name,
+            "d": int(d),
+            "L": int(L),
+            "method": "per-layer closed-form LS on (alpha_l, beta_l) "
+                      "with oracle V_theta",
+        }
+        provenance = make_provenance(
+            script_path=Path(__file__),
+            config=config,
+            random_seed=int(args.seed),
+            checkpoint_path=ckpt_path,
+        )
+        payload = {
+            "section": "paper_tmlr_1 \u00a79.1 (SPLM oracle reference "
+                       "for the shared-V_psi fit)",
+            "tag": tag,
+            "config": config,
+            "n_samples": {
+                "train": int(V_tr.shape[0]),
+                "test": int(V_te.shape[0]),
+            },
+            "headline_r2": {
+                "median_per_layer_test": median_test,
+                "mean_per_layer_test": mean_test,
+                "min_per_layer_test": min_test,
+                "max_per_layer_test": max_test,
+            },
+            "per_layer_r2": {
+                "layers": [int(ell) for ell in layers],
+                "oracle_test": per_layer_test,
+                "oracle_train": per_layer_train,
+            },
+            "learned_scalars": {
+                "alpha": [float(alpha[ell]) for ell in layers],
+                "beta": [float(beta[ell]) for ell in layers],
+            },
+        }
+        write_paper_json(Path(args.emit_json), provenance, payload)
+        print(f"[splm-oracle] saved -> {args.emit_json}")
 
 
 if __name__ == "__main__":

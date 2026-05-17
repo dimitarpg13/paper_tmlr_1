@@ -263,6 +263,17 @@ def main():
     ap.add_argument("--device", default=None)
     ap.add_argument("--tag",    default=None)
     ap.add_argument("--seed",   type=int, default=0)
+    ap.add_argument(
+        "--emit-json", default=None,
+        help="If set, also write a paper-headline JSON with provenance + "
+             "per-layer R^2 + headline metrics at this path.",
+    )
+    ap.add_argument(
+        "--architecture-label", default=None,
+        help="Optional human-readable architecture label embedded in the "
+             "emitted JSON (e.g. 'splm_leakfree', 'gpt2_small', "
+             "'matched_attention_8M'). Defaults to the tag.",
+    )
     args = ap.parse_args()
 
     device = args.device or (
@@ -408,6 +419,68 @@ def main():
         f.write(f"- `sharedV_{tag}_results.npz`\n")
         f.write(f"- `sharedV_{tag}_fig.png`\n")
     print(f"[shared-V] saved -> {md}")
+
+    if args.emit_json is not None:
+        from provenance import make_provenance, write_paper_json
+
+        layers_sorted = sorted(r2_null_te.keys())
+        per_layer_test = [float(r2_shv_te[ell]) for ell in layers_sorted]
+        per_layer_train = [float(r2_shv_tr[ell]) for ell in layers_sorted]
+        per_layer_vo_test = [float(r2_vo_te[ell]) for ell in layers_sorted]
+        per_layer_null_test = [float(r2_null_te[ell]) for ell in layers_sorted]
+        median_test = float(np.median(per_layer_test))
+        mean_test = float(np.mean(per_layer_test))
+        min_test = float(np.min(per_layer_test))
+        max_test = float(np.max(per_layer_test))
+
+        arch_label = args.architecture_label or tag
+        config = {
+            "fit": "shared_potential_fit",
+            "architecture": arch_label,
+            "trajectory_path": str(traj_path),
+            "d": int(d),
+            "L": int(L),
+            "v_psi": {"hidden": int(args.hidden), "depth": int(args.depth)},
+            "optim": {
+                "name": "AdamW",
+                "steps": int(args.steps),
+                "batch": int(args.batch),
+                "lr": float(args.lr),
+            },
+        }
+        provenance = make_provenance(
+            script_path=Path(__file__),
+            config=config,
+            random_seed=int(args.seed),
+            checkpoint_path=None,
+        )
+        payload = {
+            "section": "paper_tmlr_1 \u00a78 (shared-potential separator)",
+            "architecture": arch_label,
+            "tag": tag,
+            "config": config,
+            "n_samples": {
+                "train": int(X_tr.shape[0]),
+                "test": int(X_te.shape[0]),
+            },
+            "headline_r2": {
+                "median_per_layer_test": median_test,
+                "mean_per_layer_test": mean_test,
+                "min_per_layer_test": min_test,
+                "max_per_layer_test": max_test,
+                "overall_pooled_train": float(r2_shv_tr_overall),
+                "overall_pooled_test": float(r2_shv_te_overall),
+            },
+            "per_layer_r2": {
+                "layers": [int(ell) for ell in layers_sorted],
+                "shared_v_test": per_layer_test,
+                "shared_v_train": per_layer_train,
+                "velocity_only_test": per_layer_vo_test,
+                "static_null_test": per_layer_null_test,
+            },
+        }
+        write_paper_json(Path(args.emit_json), provenance, payload)
+        print(f"[shared-V] saved -> {args.emit_json}")
 
 
 if __name__ == "__main__":
