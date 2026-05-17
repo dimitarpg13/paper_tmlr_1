@@ -1,0 +1,72 @@
+# =====================================================================
+#  .gitignore for paper_tmlr_1 code repository
+#
+#  This repository ships source code only.  Large binary artifacts
+#  (PyTorch checkpoints, Parquet datasets, trajectory pickles,
+#  pretrained-transformer caches) are excluded; each results/,
+#  data/, checkpoints/, and figures/ subdirectory has a README.md
+#  that documents how to regenerate or fetch its contents.
+# =====================================================================
+
+# ---- Python bytecode + virtual environments ----
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+.ipynb_checkpoints/
+
+# ---- macOS Finder cache files (no semantic content) ----
+.DS_Store
+
+# ---- Microsoft Office lock files ----
+~$*
+
+# ---- Model checkpoints (large, regeneratable by re-running the
+#      corresponding train_*.py script) ----
+*.pt
+*.pth
+*.bin
+*.safetensors
+
+# ---- Parquet datasets (large, regeneratable from the upstream corpus
+#      via the relevant compute_unigram_frequencies_*.py /
+#      data_module.py loader) ----
+*.parquet
+*.arrow
+
+# ---- Trajectory pickles (~13 MB each; intermediate artifacts produced
+#      by trajectory_extraction_*.py from a checkpoint; regeneratable
+#      in seconds from the local .pt checkpoint via the extractor) ----
+*.trajectories.pkl
+
+# ---- Raw downloaded corpora (Tiny Shakespeare, etc.; auto-downloaded
+#      on first run of data_module.py) ----
+data/tiny_shakespeare/
+data/raw/
+
+# ---- HuggingFace caches (pretrained GPT-2 / Pythia weights are
+#      cached under the user's home, not in the repo) ----
+.cache/
+hf_cache/
+
+# ---- LaTeX / Jupyter build artifacts (this repo is code-only, but
+#      contributors may render notebooks locally) ----
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+.ipynb_checkpoints/
+
+# ---- Editor metadata ----
+.vscode/
+.idea/
+*.swp
+*.swo
