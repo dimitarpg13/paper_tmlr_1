@@ -23,6 +23,12 @@ results/
 └── leakfree_rerun_R2.json              # §A.3 from notebooks/conservative_arch/ln_damping_sweep/analyse_sweep.py
 ```
 
+## Robustness extensions (not paper-headline numbers)
+
+Robustness extensions and post-submission diagnostic sweeps live under their own subdirectory and follow the conventions of the extension's own README rather than the headline-JSON pattern above.
+
+- [`pca_sweep/`](./pca_sweep/) — executed-2026-05-17 §5.1 PCA-symmetry sweep artefacts (PCA-16 vs PCA-32 on GPT-2 small and Pythia-160M). Backs the "Robustness under the PCA-dimension choice" footnote in `paper_tmlr_1` §7.2 and the §4.2 falsification block of the `q9e_n` verdict note in the `semsimula` repo. **Verdict: REJECTED** (PCA-16 finding is robust at PCA-32 on both architectures; max gaps 0.089 / 0.067 < 0.10 threshold).
+
 ## Provenance header
 
 Each JSON file begins with a provenance block recording:

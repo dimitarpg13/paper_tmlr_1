@@ -96,3 +96,7 @@ Output artefacts:
 ## On Colab
 
 Open `pca_symmetry_sweep_a100_h100.ipynb` directly from this repository on GitHub in Colab. The first code cell handles the GDrive mount, repo clone, and dependency install; all outputs land under `/content/drive/MyDrive/paper_tmlr_1_pca_sweep/`.
+
+## Executed-run artefacts (committed)
+
+The first executed run of this harness (2026-05-17, H100 / Colab, GPT-2 small + Pythia-160M at PCA-16 and PCA-32) is committed in this repository under [`results/pca_sweep/`](../../../results/pca_sweep/). That directory contains the per-(architecture, PCA-dim) `.npz` / `.png` / `.md` artefacts, the aggregator outputs (`pca_sweep_table.md`, `pca_sweep_verdict.md`, `pca_sweep_summary.json`, `pca_sweep_gap_profile.png`), and a README that ties the headline numbers (GPT-2 0.079 → 0.089; Pythia 0.070 → 0.067; overall REJECTED) back to the §5.1 decision rule and the paper_tmlr_1 §7.2 robustness footnote they support.
