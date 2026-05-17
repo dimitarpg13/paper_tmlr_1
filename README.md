@@ -207,6 +207,62 @@ The forensic detail of the leak bug and its fix is documented at
 
 ---
 
+## Robustness extensions (not part of the paper)
+
+The following extensions live in
+[`notebooks/conservative_arch/scripts/`](notebooks/conservative_arch/scripts/)
+and are **not** part of `paper_tmlr_1` as submitted. They are
+robustness checks whose outcome determines a small set of conditional
+paper edits before TMLR submission. The decision rules and
+paper-update policies are specified in companion notes in the main
+[`semsimula`](https://github.com/dimitarpg13/semsimula) repository
+under `docs/`.
+
+### §5.1 PCA-symmetry sweep (≲30 min on H100; ≲1 h with all four architectures)
+
+Re-runs the §7.2 velocity-aware Jacobian-symmetry test at multiple
+PCA dimensions (default: PCA-16 vs PCA-32; optional PCA-64 with
+ridge regularisation) on the same frozen-checkpoint hidden-state
+trajectories, to test whether the *R²* gap of ≤ 0.079 reported at
+PCA-16 is robust under an increase in the projection dimension or is
+an artifact of aggressive dimensionality reduction.
+
+```bash
+# Colab (preferred for H100 access):
+#   open notebooks/conservative_arch/scripts/pca_symmetry_sweep_a100_h100.ipynb
+#   in Google Colab; the first cell handles GDrive mount + repo clone.
+
+# Headless / SLURM:
+cd notebooks/conservative_arch/
+mkdir -p results
+python extract_gpt2_baseline.py --model gpt2 \
+  --out results/gpt2_baseline.trajectories.pkl
+python extract_gpt2_baseline.py --model EleutherAI/pythia-160m \
+  --out results/pythia-160m_baseline.trajectories.pkl
+for ARCH in gpt2 pythia; do
+  for K in 16 32; do
+    python jacobian_symmetry.py \
+      --traj  results/${ARCH}_baseline.trajectories.pkl \
+      --pca_k $K --tag ${ARCH}_pca${K}
+  done
+done
+python scripts/aggregate_pca_sweep.py \
+  --in-dir results --out-dir results --pca-ks 16 32
+```
+
+The aggregator classifies the outcome as **REJECTED** (max gap ≤ 0.10
+at every PCA-k; paper §7.2 stands), **PARTIAL** (gap in (0.10, 0.20]
+at the largest PCA-k; scope-of-claim sharpening needed), or
+**CONFIRMED** (gap > 0.20; §7.2 framing rewrite needed, §8 three-way
+separator headline strengthens). The verdict for the paper-edit cycle
+is determined by the GPT-2 row alone; the remaining architectures
+sharpen but do not change the classification.
+
+See [`notebooks/conservative_arch/scripts/README.md`](notebooks/conservative_arch/scripts/README.md)
+for full documentation.
+
+---
+
 ## Reproduction contract
 
 Every numerical claim in the paper has corresponding source code in
