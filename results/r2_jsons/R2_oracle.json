@@ -1,11 +1,11 @@
 {
   "_provenance": {
-    "git_commit": "f0d215418295b66ba1bfe4e632f7a09de99ac1be",
+    "git_commit": "7f10abbd184ce9264664fb0e29f5f0be3b371a9f",
     "code_path": "notebooks/conservative_arch/splm_oracle_fit.py",
-    "config_hash": "75a44c7f5386b81504c7415699f371786086df1b0544876a1fd61bfece290fe1",
+    "config_hash": "dfdc6bbb0828bc645a4a3dadc021f38bcb81bfa50eac3e33263abd54320ead44",
     "checkpoint_sha256": "1ace8134a2e74ee9fa8e252532ddbbd85fc10de8db9ff1e027379b76e3024e91",
     "random_seed": 0,
-    "timestamp": "2026-05-18T00:00:44Z",
+    "timestamp": "2026-05-18T00:32:38Z",
     "host": "2b45e99251da"
   },
   "section": "paper_tmlr_1 \u00a79.1 (SPLM oracle reference for the shared-V_psi fit)",
@@ -13,7 +13,6 @@
   "config": {
     "fit": "splm_oracle_fit",
     "checkpoint": "splm_em_ln_shakespeare_gamma0p10_seed0_ckpt_latest.pt",
-    "checkpoint_variant": "sarf_mass_ln",
     "d": 128,
     "L": 8,
     "method": "per-layer closed-form LS on (alpha_l, beta_l) with oracle V_theta"

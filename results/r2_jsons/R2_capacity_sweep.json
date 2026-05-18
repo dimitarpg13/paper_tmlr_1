@@ -1,11 +1,11 @@
 {
   "_provenance": {
-    "git_commit": "f0d215418295b66ba1bfe4e632f7a09de99ac1be",
+    "git_commit": "7f10abbd184ce9264664fb0e29f5f0be3b371a9f",
     "code_path": "notebooks/conservative_arch/sharedV_capacity_sweep.py",
     "config_hash": "6d05fe463cbc54d068be95d22738bf3d8f4734dcbfe30c0559458cfa7dcf6d5c",
     "checkpoint_sha256": null,
     "random_seed": 0,
-    "timestamp": "2026-05-18T00:00:45Z",
+    "timestamp": "2026-05-18T00:32:39Z",
     "host": "2b45e99251da"
   },
   "section": "paper_tmlr_1 \u00a79.2 (shared-V_psi capacity sweep on GPT-2 trajectories)",

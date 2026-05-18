@@ -1,11 +1,11 @@
 {
   "_provenance": {
-    "git_commit": "f0d215418295b66ba1bfe4e632f7a09de99ac1be",
+    "git_commit": "7f10abbd184ce9264664fb0e29f5f0be3b371a9f",
     "code_path": "notebooks/conservative_arch/scripts/build_r2_three_way_separator.py",
     "config_hash": "755f13f2f26cc9432b639c9b9434a848e495a4ab22364d73084fecbce1d3166c",
     "checkpoint_sha256": null,
     "random_seed": 0,
-    "timestamp": "2026-05-18T00:01:11Z",
+    "timestamp": "2026-05-18T00:33:04Z",
     "host": "2b45e99251da"
   },
   "section": "paper_tmlr_1 \u00a78 (three-way shared-potential separator)",
@@ -100,12 +100,12 @@
         ]
       },
       "upstream_provenance": {
-        "git_commit": "f0d215418295b66ba1bfe4e632f7a09de99ac1be",
+        "git_commit": "7f10abbd184ce9264664fb0e29f5f0be3b371a9f",
         "code_path": "notebooks/conservative_arch/shared_potential_fit.py",
         "config_hash": "fa40e83532ad04da5e93e6da5b2854ee8df288f423a147a107125d5910889bb9",
         "checkpoint_sha256": null,
         "random_seed": 0,
-        "timestamp": "2026-05-18T00:00:01Z",
+        "timestamp": "2026-05-18T00:31:56Z",
         "host": "2b45e99251da"
       }
     },
@@ -190,12 +190,12 @@
         ]
       },
       "upstream_provenance": {
-        "git_commit": "f0d215418295b66ba1bfe4e632f7a09de99ac1be",
+        "git_commit": "7f10abbd184ce9264664fb0e29f5f0be3b371a9f",
         "code_path": "notebooks/conservative_arch/shared_potential_fit.py",
         "config_hash": "fe66f01b18b1922c11b70f5dc2e15da568ee298e487df7dbd9c2ba886d898ad7",
         "checkpoint_sha256": null,
         "random_seed": 0,
-        "timestamp": "2026-05-17T23:59:54Z",
+        "timestamp": "2026-05-18T00:31:49Z",
         "host": "2b45e99251da"
       }
     },
@@ -300,12 +300,12 @@
         ]
       },
       "upstream_provenance": {
-        "git_commit": "f0d215418295b66ba1bfe4e632f7a09de99ac1be",
+        "git_commit": "7f10abbd184ce9264664fb0e29f5f0be3b371a9f",
         "code_path": "notebooks/conservative_arch/shared_potential_fit.py",
         "config_hash": "3a0039676716d53c0949ce2dd00e9ed0dcfc1ce90a8fd71d3791e0ad2c021c5d",
         "checkpoint_sha256": null,
         "random_seed": 0,
-        "timestamp": "2026-05-17T23:59:47Z",
+        "timestamp": "2026-05-18T00:31:42Z",
         "host": "2b45e99251da"
       }
     }
