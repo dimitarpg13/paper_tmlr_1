@@ -1,0 +1,90 @@
+{
+  "_provenance": {
+    "git_commit": "f0d215418295b66ba1bfe4e632f7a09de99ac1be",
+    "code_path": "notebooks/conservative_arch/shared_potential_fit.py",
+    "config_hash": "fe66f01b18b1922c11b70f5dc2e15da568ee298e487df7dbd9c2ba886d898ad7",
+    "checkpoint_sha256": null,
+    "random_seed": 0,
+    "timestamp": "2026-05-17T23:59:54Z",
+    "host": "2b45e99251da"
+  },
+  "section": "paper_tmlr_1 \u00a78 (shared-potential separator)",
+  "architecture": "matched_attention_8M",
+  "tag": "matched_baseline",
+  "config": {
+    "fit": "shared_potential_fit",
+    "architecture": "matched_attention_8M",
+    "trajectory_path": "/content/paper_tmlr_1/notebooks/conservative_arch/results/matched_baseline.trajectories.pkl",
+    "d": 128,
+    "L": 8,
+    "v_psi": {
+      "hidden": 256,
+      "depth": 2
+    },
+    "optim": {
+      "name": "AdamW",
+      "steps": 4000,
+      "batch": 2048,
+      "lr": 0.003
+    }
+  },
+  "n_samples": {
+    "train": 7889,
+    "test": 2002
+  },
+  "headline_r2": {
+    "median_per_layer_test": 0.5385667458044135,
+    "mean_per_layer_test": 0.5478309468058725,
+    "min_per_layer_test": 0.27943299507852104,
+    "max_per_layer_test": 0.8187117384754882,
+    "overall_pooled_train": 0.8180458440602686,
+    "overall_pooled_test": 0.612436704160237
+  },
+  "per_layer_r2": {
+    "layers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "shared_v_test": [
+      0.8187117384754882,
+      0.7288740039620552,
+      0.6406283956847896,
+      0.5385667458044135,
+      0.47021685268593816,
+      0.35838589594990244,
+      0.27943299507852104
+    ],
+    "shared_v_train": [
+      0.8716265283726259,
+      0.8730873505967301,
+      0.7944833261067964,
+      0.7420917248923244,
+      0.7399643017837081,
+      0.8003078255223246,
+      0.7432944348334836
+    ],
+    "velocity_only_test": [
+      0.06152325033629347,
+      0.1635616577252169,
+      0.0407337916088486,
+      0.06202899226641734,
+      0.02915927485200709,
+      0.04187387176558788,
+      0.059968594141877274
+    ],
+    "static_null_test": [
+      5.551115123125783e-16,
+      -1.478047806369176e-07,
+      1.1102230246251565e-15,
+      1.5543122344752192e-15,
+      1.5543122344752192e-15,
+      -7.065817397844398e-08,
+      1.887379141862766e-15
+    ]
+  }
+}

@@ -45,12 +45,19 @@ import torch
 import torch.nn.functional as F
 
 from model import ScalarPotentialLM, SPLMConfig
+from trajectory_extraction import _build_model_from_checkpoint
 from e_init_corpus import CORPUS
-from trajectory_extraction import load_splm_any_variant
 
 
 SCRIPT_DIR  = Path(__file__).parent
 RESULTS_DIR = SCRIPT_DIR / "results"
+
+
+# ---------------------------------------------------------------------------
+def load_splm(ckpt_path: Path, device: str):
+    raw = torch.load(ckpt_path, map_location=device, weights_only=False)
+    model, _ = _build_model_from_checkpoint(raw, device)
+    return model
 
 
 def tokenize(sentence: str, max_len: int) -> np.ndarray:
@@ -61,17 +68,19 @@ def tokenize(sentence: str, max_len: int) -> np.ndarray:
     return np.asarray(ids, dtype=np.int64)
 
 
-def _extract_oracle_tuples_plain(
-    model: ScalarPotentialLM, sentence: str, device: str,
-) -> Tuple[np.ndarray, np.ndarray]:
-    """Plain SPLM (model.py) oracle re-integration.
+def extract_oracle_tuples(model: ScalarPotentialLM, sentence: str, device: str) \
+        -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """For a single sentence, re-run SPLM and return
+       H   : (L+1, T, d)  raw hidden states  h_l
+       GV  : (L,   T, d)  grad_h V_theta(xi, h_l)  for l = 0..L-1
+       XI  : (T, d)  the constant context vector
 
-    Dynamics:
+    The dynamics equation is
+
        h_{l+1} = h_l + dt * v_{l+1}
-       v_{l+1} = (v_l + dt*f_l/m) / (1 + dt*gamma)
-       f_l     = -grad_h V_theta(xi, h_l)        # xi fixed at h_0 pool
+       v_{l+1} = (v_l + dt*f_l/m) / (1 + dt*gamma),  f_l = -grad_h V_theta(xi, h_l)
 
-    Returns (H, GV) with shapes (L+1, T, d) and (L, T, d).
+    so Delta h_l := h_{l+1} - h_l depends on (v_l, grad_V at h_l).
     """
     max_len = model.cfg.max_len
     ids = tokenize(sentence, max_len)
@@ -95,78 +104,14 @@ def _extract_oracle_tuples_plain(
             h = h_in + dt * v
             H.append(h.detach().cpu().numpy()[0])
 
-    return (
-        np.stack(H, axis=0).astype(np.float32),
-        np.stack(GV, axis=0).astype(np.float32),
-    )
-
-
-def _extract_oracle_tuples_sarf_mass_ln(
-    model, sentence: str, device: str,
-) -> Tuple[np.ndarray, np.ndarray]:
-    """SARFMassLN SPLM (model_ln.py) oracle re-integration.
-
-    Mirrors ScalarPotentialLMSARFMassLN.integrate(...) faithfully:
-      - per-token mass m = compute_mass(x, emb_initial)
-      - per-step xi = causal_cumulative_mean(h_l.detach()) if causal_force
-      - post-step LN projection of h_{l+1} (if ln_after_step)
-      - gamma is the fixed-or-learned scalar exposed by model.gamma
-
-    Returns (H, GV) with shapes (L+1, T, d) and (L, T, d). With LN
-    folded into the dynamics, Delta h_l is no longer exactly affine in
-    (v_l, grad_V), so the downstream linear oracle fit reports R^2 < 1
-    in general; that residual is precisely the part of the SARFMassLN
-    dynamics that LN-after-step distorts (and is the headline §9.1
-    quantity).
-    """
-    from model_sarf_mass import causal_cumulative_mean
-    import torch.nn.functional as F
-
-    cfg = model.cfg
-    max_len = cfg.max_len
-    ids = tokenize(sentence, max_len)
-    x = torch.from_numpy(ids).unsqueeze(0).to(device)
-
-    with torch.enable_grad():
-        emb = model._embed(x)
-        h = model._project(emb) if cfg.ln_after_step else emb
-        v = torch.zeros_like(h)
-        dt, gamma = cfg.dt, model.gamma
-        m_b = model.compute_mass(x, emb)
-
-        H = [h.detach().cpu().numpy()[0]]
-        GV = []
-        for _ in range(cfg.L):
-            xi_input = h.detach() if cfg.causal_force else h
-            xi_now = causal_cumulative_mean(xi_input)
-
-            h_in = h.detach().requires_grad_(True)
-            V_out = model.V_theta(xi_now, h_in).sum()
-            grad_V, = torch.autograd.grad(V_out, h_in)
-            GV.append(grad_V.detach().cpu().numpy()[0])
-            f = -grad_V
-            v = (v + dt * f / m_b) / (1.0 + dt * gamma)
-            h_new = h_in + dt * v
-            if cfg.ln_after_step:
-                h_new = model._project(h_new)
-            h = h_new
-            H.append(h.detach().cpu().numpy()[0])
-
-    return (
-        np.stack(H, axis=0).astype(np.float32),
-        np.stack(GV, axis=0).astype(np.float32),
-    )
-
-
-def extract_oracle_tuples(model, sentence: str, device: str, variant: str):
-    """Dispatch the per-sentence oracle re-integration by checkpoint variant."""
-    if variant == "sarf_mass_ln":
-        return _extract_oracle_tuples_sarf_mass_ln(model, sentence, device)
-    return _extract_oracle_tuples_plain(model, sentence, device)
+    return (np.stack(H, axis=0).astype(np.float32),         # (L+1, T, d)
+            np.stack(GV, axis=0).astype(np.float32),        # (L, T, d)
+            xi.detach().cpu().numpy()[0].astype(np.float32) # (T, d)
+            )
 
 
 # ---------------------------------------------------------------------------
-def build_pools(model, sentences: List[Dict], device: str, variant: str):
+def build_pools(model: ScalarPotentialLM, sentences: List[Dict], device: str):
     """For each (split, layer l >= 1) build pooled (v, dh, grad_V_theta, grad_V_theta_h_aligned).
 
     We fit on
@@ -179,7 +124,7 @@ def build_pools(model, sentences: List[Dict], device: str, variant: str):
     test_V,  test_dH,  test_G,  test_Lay  = [], [], [], []
 
     for s in sentences:
-        H, GV = extract_oracle_tuples(model, s["sentence"], device, variant)
+        H, GV, _XI = extract_oracle_tuples(model, s["sentence"], device)
         L = H.shape[0] - 1
         for ell in range(1, L):
             v_l   = H[ell]   - H[ell - 1]
@@ -255,10 +200,9 @@ def main():
     tag = args.tag or ckpt_path.stem.replace(".ckpt_latest", "").replace("splm_", "")
     print(f"[splm-oracle] ckpt={ckpt_path.name}  tag={tag}  device={device}")
 
-    model, model_cfg, variant, _ck = load_splm_any_variant(ckpt_path, device)
-    L = model_cfg.L
-    d = model_cfg.d
-    print(f"[splm-oracle] variant={variant}  d={d}  L={L}")
+    model = load_splm(ckpt_path, device)
+    L = model.cfg.L
+    d = model.cfg.d
 
     sentences = []
     rng = np.random.default_rng(args.seed)
@@ -274,7 +218,7 @@ def main():
           f"test={sum(1 for s in sentences if s['split']=='test')}")
 
     (V_tr, Y_tr, G_tr, Ltr,
-     V_te, Y_te, G_te, Lte) = build_pools(model, sentences, device, variant)
+     V_te, Y_te, G_te, Lte) = build_pools(model, sentences, device)
     print(f"[splm-oracle] samples: train={V_tr.shape[0]:,}  test={V_te.shape[0]:,}")
 
     Y_pred_tr, alpha, beta = fit_scalars(V_tr, G_tr, Y_tr, Ltr)
@@ -373,7 +317,6 @@ def main():
         config = {
             "fit": "splm_oracle_fit",
             "checkpoint": ckpt_path.name,
-            "checkpoint_variant": variant,
             "d": int(d),
             "L": int(L),
             "method": "per-layer closed-form LS on (alpha_l, beta_l) "

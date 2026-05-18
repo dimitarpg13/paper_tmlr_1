@@ -1,0 +1,313 @@
+{
+  "_provenance": {
+    "git_commit": "f0d215418295b66ba1bfe4e632f7a09de99ac1be",
+    "code_path": "notebooks/conservative_arch/scripts/build_r2_three_way_separator.py",
+    "config_hash": "755f13f2f26cc9432b639c9b9434a848e495a4ab22364d73084fecbce1d3166c",
+    "checkpoint_sha256": null,
+    "random_seed": 0,
+    "timestamp": "2026-05-18T00:01:11Z",
+    "host": "2b45e99251da"
+  },
+  "section": "paper_tmlr_1 \u00a78 (three-way shared-potential separator)",
+  "headline_r2_three_way": {
+    "splm_leakfree_gamma0p10": 0.9568387629933279,
+    "matched_attention_8M": 0.5385667458044135,
+    "gpt2_small_pretrained": 0.45992737648102344,
+    "splm_vs_matched_margin": 0.4182720171889144,
+    "splm_vs_gpt2_margin": 0.4969113865123045,
+    "matched_vs_gpt2_margin": 0.07863936932339011
+  },
+  "verdict": "Three-way architectural separator: SPLM positive control passes the shared-potential test (median per-layer test R^2 = +0.957), while both attention-based architectures fail decisively (matched = +0.539, GPT-2 = +0.460). The SPLM vs attention gap is the substantive content of the headline claim.",
+  "architectures": [
+    {
+      "architecture": "splm_leakfree_gamma0p10",
+      "source_json": "/content/drive/MyDrive/paper_tmlr_1_r2_jsons/sharedV_splm_leakfree_gamma0p10.json",
+      "tag": "splm_leakfree_gamma0p10_seed0",
+      "config": {
+        "fit": "shared_potential_fit",
+        "architecture": "splm_leakfree_gamma0p10",
+        "trajectory_path": "/content/paper_tmlr_1/notebooks/conservative_arch/results/splm_leakfree_gamma0p10_seed0.trajectories.pkl",
+        "d": 128,
+        "L": 8,
+        "v_psi": {
+          "hidden": 256,
+          "depth": 2
+        },
+        "optim": {
+          "name": "AdamW",
+          "steps": 4000,
+          "batch": 2048,
+          "lr": 0.003
+        }
+      },
+      "n_samples": {
+        "train": 7889,
+        "test": 2002
+      },
+      "headline_r2": {
+        "median_per_layer_test": 0.9568387629933279,
+        "mean_per_layer_test": 0.9571749962959606,
+        "min_per_layer_test": 0.9471681665148202,
+        "max_per_layer_test": 0.9692906491305986,
+        "overall_pooled_train": 0.9854654933306788,
+        "overall_pooled_test": 0.9547117816355163
+      },
+      "per_layer_r2": {
+        "layers": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "shared_v_test": [
+          0.9692906491305986,
+          0.9581888641206067,
+          0.9568387629933279,
+          0.958631009426387,
+          0.9549839416633669,
+          0.9551235802226161,
+          0.9471681665148202
+        ],
+        "shared_v_train": [
+          0.9660614921460358,
+          0.968948539769977,
+          0.9771056199359309,
+          0.9844472552040351,
+          0.9894076208463529,
+          0.9899694873033356,
+          0.9888090541887448
+        ],
+        "velocity_only_test": [
+          0.9561265238350134,
+          0.8904628820297298,
+          0.8759847997713938,
+          0.8588378542338724,
+          0.8490033657921299,
+          0.8247287197311995,
+          0.8128573034326936
+        ],
+        "static_null_test": [
+          3.6637359812630166e-15,
+          1.7763568394002505e-15,
+          6.228376736583385e-08,
+          5.551115123125783e-16,
+          4.440892098500626e-16,
+          4.440892098500626e-16,
+          4.440892098500626e-16
+        ]
+      },
+      "upstream_provenance": {
+        "git_commit": "f0d215418295b66ba1bfe4e632f7a09de99ac1be",
+        "code_path": "notebooks/conservative_arch/shared_potential_fit.py",
+        "config_hash": "fa40e83532ad04da5e93e6da5b2854ee8df288f423a147a107125d5910889bb9",
+        "checkpoint_sha256": null,
+        "random_seed": 0,
+        "timestamp": "2026-05-18T00:00:01Z",
+        "host": "2b45e99251da"
+      }
+    },
+    {
+      "architecture": "matched_attention_8M",
+      "source_json": "/content/drive/MyDrive/paper_tmlr_1_r2_jsons/sharedV_matched_attention_8M.json",
+      "tag": "matched_baseline",
+      "config": {
+        "fit": "shared_potential_fit",
+        "architecture": "matched_attention_8M",
+        "trajectory_path": "/content/paper_tmlr_1/notebooks/conservative_arch/results/matched_baseline.trajectories.pkl",
+        "d": 128,
+        "L": 8,
+        "v_psi": {
+          "hidden": 256,
+          "depth": 2
+        },
+        "optim": {
+          "name": "AdamW",
+          "steps": 4000,
+          "batch": 2048,
+          "lr": 0.003
+        }
+      },
+      "n_samples": {
+        "train": 7889,
+        "test": 2002
+      },
+      "headline_r2": {
+        "median_per_layer_test": 0.5385667458044135,
+        "mean_per_layer_test": 0.5478309468058725,
+        "min_per_layer_test": 0.27943299507852104,
+        "max_per_layer_test": 0.8187117384754882,
+        "overall_pooled_train": 0.8180458440602686,
+        "overall_pooled_test": 0.612436704160237
+      },
+      "per_layer_r2": {
+        "layers": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "shared_v_test": [
+          0.8187117384754882,
+          0.7288740039620552,
+          0.6406283956847896,
+          0.5385667458044135,
+          0.47021685268593816,
+          0.35838589594990244,
+          0.27943299507852104
+        ],
+        "shared_v_train": [
+          0.8716265283726259,
+          0.8730873505967301,
+          0.7944833261067964,
+          0.7420917248923244,
+          0.7399643017837081,
+          0.8003078255223246,
+          0.7432944348334836
+        ],
+        "velocity_only_test": [
+          0.06152325033629347,
+          0.1635616577252169,
+          0.0407337916088486,
+          0.06202899226641734,
+          0.02915927485200709,
+          0.04187387176558788,
+          0.059968594141877274
+        ],
+        "static_null_test": [
+          5.551115123125783e-16,
+          -1.478047806369176e-07,
+          1.1102230246251565e-15,
+          1.5543122344752192e-15,
+          1.5543122344752192e-15,
+          -7.065817397844398e-08,
+          1.887379141862766e-15
+        ]
+      },
+      "upstream_provenance": {
+        "git_commit": "f0d215418295b66ba1bfe4e632f7a09de99ac1be",
+        "code_path": "notebooks/conservative_arch/shared_potential_fit.py",
+        "config_hash": "fe66f01b18b1922c11b70f5dc2e15da568ee298e487df7dbd9c2ba886d898ad7",
+        "checkpoint_sha256": null,
+        "random_seed": 0,
+        "timestamp": "2026-05-17T23:59:54Z",
+        "host": "2b45e99251da"
+      }
+    },
+    {
+      "architecture": "gpt2_small_pretrained",
+      "source_json": "/content/drive/MyDrive/paper_tmlr_1_r2_jsons/sharedV_gpt2_small_pretrained.json",
+      "tag": "gpt2_baseline",
+      "config": {
+        "fit": "shared_potential_fit",
+        "architecture": "gpt2_small_pretrained",
+        "trajectory_path": "/content/paper_tmlr_1/notebooks/conservative_arch/results/gpt2_baseline.trajectories.pkl",
+        "d": 768,
+        "L": 12,
+        "v_psi": {
+          "hidden": 256,
+          "depth": 2
+        },
+        "optim": {
+          "name": "AdamW",
+          "steps": 4000,
+          "batch": 2048,
+          "lr": 0.003
+        }
+      },
+      "n_samples": {
+        "train": 12397,
+        "test": 3146
+      },
+      "headline_r2": {
+        "median_per_layer_test": 0.45992737648102344,
+        "mean_per_layer_test": 0.44812823764283166,
+        "min_per_layer_test": 0.03876881879813654,
+        "max_per_layer_test": 0.9894226910661886,
+        "overall_pooled_train": 0.9757727890036422,
+        "overall_pooled_test": 0.960774114307472
+      },
+      "per_layer_r2": {
+        "layers": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "shared_v_test": [
+          0.5392146837441395,
+          0.9894226910661886,
+          0.7902670164969663,
+          0.7337538332994196,
+          0.45992737648102344,
+          0.19628111670492898,
+          0.0670499015656455,
+          0.03876881879813654,
+          0.05703859316557558,
+          0.08079419334357596,
+          0.9768923894055486
+        ],
+        "shared_v_train": [
+          0.9385643691525289,
+          0.9970657079638985,
+          0.7974358785702109,
+          0.7418842295433992,
+          0.4671200985480768,
+          0.19807118236183907,
+          0.06704061049106702,
+          0.03510773559204383,
+          0.05585016636375495,
+          0.08389605550774404,
+          0.9835271455032694
+        ],
+        "velocity_only_test": [
+          0.2542928718232721,
+          0.04479120247470525,
+          0.7179021886893726,
+          0.6099162031293048,
+          0.3761337430591354,
+          0.13455469187407387,
+          0.050623955788081876,
+          0.03638941825113373,
+          0.05681279739106071,
+          0.07024377045683361,
+          7.797390916075564e-05
+        ],
+        "static_null_test": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          -1.1242599562422129e-07,
+          8.920599436912369e-08,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "upstream_provenance": {
+        "git_commit": "f0d215418295b66ba1bfe4e632f7a09de99ac1be",
+        "code_path": "notebooks/conservative_arch/shared_potential_fit.py",
+        "config_hash": "3a0039676716d53c0949ce2dd00e9ed0dcfc1ce90a8fd71d3791e0ad2c021c5d",
+        "checkpoint_sha256": null,
+        "random_seed": 0,
+        "timestamp": "2026-05-17T23:59:47Z",
+        "host": "2b45e99251da"
+      }
+    }
+  ]
+}

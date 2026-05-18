@@ -1,0 +1,181 @@
+{
+  "_provenance": {
+    "git_commit": "f0d215418295b66ba1bfe4e632f7a09de99ac1be",
+    "code_path": "notebooks/conservative_arch/token_direction_fit.py",
+    "config_hash": "b26c7136e14b0595f2723d97c732e3e8d9f67ad8c9d4edee94fdfcc38614a770",
+    "checkpoint_sha256": null,
+    "random_seed": 0,
+    "timestamp": "2026-05-18T00:01:10Z",
+    "host": "2b45e99251da"
+  },
+  "section": "paper_tmlr_1 \u00a79.3 (token-direction shared-V_psi fit + velocity-aware Jacobian symmetry)",
+  "architecture": "splm_leakfree_gamma0p10",
+  "tag": "splm_leakfree_gamma0p10_seed0",
+  "config": {
+    "fit": "token_direction_fit",
+    "architecture": "splm_leakfree_gamma0p10",
+    "trajectory_path": "/content/paper_tmlr_1/notebooks/conservative_arch/results/splm_leakfree_gamma0p10_seed0.trajectories.pkl",
+    "d": 128,
+    "L": 8,
+    "v_psi": {
+      "hidden": 256,
+      "depth": 2
+    },
+    "optim": {
+      "name": "AdamW",
+      "steps": 4000,
+      "batch": 2048,
+      "lr": 0.003
+    },
+    "pca_k": 16,
+    "ridge": 0.001,
+    "t_skip": 2
+  },
+  "n_samples": {
+    "train": 7983,
+    "test": 2034
+  },
+  "shared_v_token_direction": {
+    "headline_r2": {
+      "median_per_layer_test": 0.43581381856189383,
+      "mean_per_layer_test": 0.4142162354691878,
+      "min_per_layer_test": 0.33677506856100947,
+      "overall_pooled_train": 0.6851637197340894,
+      "overall_pooled_test": 0.41700518294611966
+    },
+    "per_layer_r2": {
+      "layers": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "shared_v_test": [
+        0.4686525619600741,
+        0.46939740214097647,
+        0.4657623737741593,
+        0.45457052822482835,
+        0.43581381856189383,
+        0.3960312235290516,
+        0.35552051015216857,
+        0.33677506856100947,
+        0.3454226323185289
+      ],
+      "shared_v_train": [
+        0.6844052270730343,
+        0.6946877911926677,
+        0.7018566779527533,
+        0.7002673872226854,
+        0.6937705302865702,
+        0.6873088111696098,
+        0.6820794323950634,
+        0.670990177335355,
+        0.64153107718377
+      ],
+      "velocity_only_test": [
+        0.2641120311160142,
+        0.26328895467033164,
+        0.2613215775966168,
+        0.258701621228275,
+        0.25628727037572174,
+        0.2552626769679581,
+        0.25539903823526555,
+        0.2555285733633582,
+        0.2558479785352712
+      ],
+      "static_null_test": [
+        -0.00013752362248720118,
+        -0.00014129358635694977,
+        -0.00014949860549484661,
+        -0.0001666215385309755,
+        -0.00020174157018049144,
+        -0.0002580664819789025,
+        -0.0003197415770879175,
+        -0.0003469824281383538,
+        -0.0003186012941949201
+      ]
+    }
+  },
+  "jacobian_symmetry_token_direction": {
+    "max_velocity_aware_test_gap": 0.01354512926358531,
+    "per_layer": [
+      {
+        "layer": 0,
+        "pos_only_test_full": 0.6054555093425622,
+        "pos_only_test_sym": 0.5926641335144063,
+        "velocity_aware_test_full": 0.6161934284721976,
+        "velocity_aware_test_sym": 0.6052798864405782,
+        "velocity_aware_test_gap": 0.010913542031619428
+      },
+      {
+        "layer": 1,
+        "pos_only_test_full": 0.603673088661175,
+        "pos_only_test_sym": 0.5911606952726012,
+        "velocity_aware_test_full": 0.6148819808653303,
+        "velocity_aware_test_sym": 0.6028593038804999,
+        "velocity_aware_test_gap": 0.012022676984830394
+      },
+      {
+        "layer": 2,
+        "pos_only_test_full": 0.5974007862589299,
+        "pos_only_test_sym": 0.5876030672219341,
+        "velocity_aware_test_full": 0.6085441278680731,
+        "velocity_aware_test_sym": 0.5959978653686911,
+        "velocity_aware_test_gap": 0.012546262499381955
+      },
+      {
+        "layer": 3,
+        "pos_only_test_full": 0.5875716744966103,
+        "pos_only_test_sym": 0.5813912224483864,
+        "velocity_aware_test_full": 0.599077598552946,
+        "velocity_aware_test_sym": 0.5855324692893606,
+        "velocity_aware_test_gap": 0.01354512926358531
+      },
+      {
+        "layer": 4,
+        "pos_only_test_full": 0.5744313109791239,
+        "pos_only_test_sym": 0.5722766854680239,
+        "velocity_aware_test_full": 0.5856252612567432,
+        "velocity_aware_test_sym": 0.5740054652306263,
+        "velocity_aware_test_gap": 0.011619796026116846
+      },
+      {
+        "layer": 5,
+        "pos_only_test_full": 0.5589807998559285,
+        "pos_only_test_sym": 0.5607378579137148,
+        "velocity_aware_test_full": 0.5685755833719173,
+        "velocity_aware_test_sym": 0.5626188123527405,
+        "velocity_aware_test_gap": 0.005956771019176799
+      },
+      {
+        "layer": 6,
+        "pos_only_test_full": 0.5473361954248368,
+        "pos_only_test_sym": 0.5472475102734922,
+        "velocity_aware_test_full": 0.5532657731451556,
+        "velocity_aware_test_sym": 0.548473769526137,
+        "velocity_aware_test_gap": 0.004792003619018548
+      },
+      {
+        "layer": 7,
+        "pos_only_test_full": 0.5380670153643721,
+        "pos_only_test_sym": 0.5375018475377817,
+        "velocity_aware_test_full": 0.5407723979316166,
+        "velocity_aware_test_sym": 0.5368124369040101,
+        "velocity_aware_test_gap": 0.003959961027606429
+      },
+      {
+        "layer": 8,
+        "pos_only_test_full": 0.5387158296602116,
+        "pos_only_test_sym": 0.5376594488290316,
+        "velocity_aware_test_full": 0.5427159977335725,
+        "velocity_aware_test_sym": 0.5371958525506492,
+        "velocity_aware_test_gap": 0.0055201451829233195
+      }
+    ]
+  }
+}

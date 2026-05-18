@@ -33,61 +33,60 @@ from model import ScalarPotentialLM, SPLMConfig
 from trajectory_types import Trajectory
 
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-_BUNDLED_LOGFREQ = _REPO_ROOT / "data" / "logfreq_surprisal.npy"
+def _build_model_from_checkpoint(ck, device):
+    """Auto-detect checkpoint variant and return (model, d, L, max_len).
 
-
-def load_splm_any_variant(ckpt_path: Path, device: str):
-    """Variant-aware loader for SPLM checkpoints.
-
-    Dispatches on ``ck['variant']``:
-
-      - ``'sarf_mass_ln'`` -> ScalarPotentialLMSARFMassLN (LN-after-step +
-        per-token logfreq mass; this is the leak-corrected positive
-        control used in paper_tmlr_1 §A.3).
-      - default            -> ScalarPotentialLM (the plain shared-V_theta
-        flow from model.py).
-
-    For ``sarf_mass_ln`` checkpoints we override the embedded
-    ``logfreq_path`` (which is the absolute path the upstream training
-    job was launched from) with the bundled
-    ``data/logfreq_surprisal.npy``, so the same checkpoint loads
-    unchanged across machines (Colab VMs, CI, contributor laptops).
+    Handles three SPLM families:
+      1. Base SPLMConfig + ScalarPotentialLM
+      2. SPLMSARFMassConfig + ScalarPotentialLMSARFMass
+      3. SPLMSARFMassLNConfig + ScalarPotentialLMSARFMassLN
     """
-    ck = torch.load(ckpt_path, map_location=device, weights_only=False)
-    variant = ck.get("variant", "splm")
-    cfg_dict = dict(ck["model_cfg"])
+    import dataclasses
+    import tempfile
 
-    if variant == "sarf_mass_ln":
-        from model_ln import ScalarPotentialLMSARFMassLN, SPLMSARFMassLNConfig
-        if cfg_dict.get("mass_mode") == "logfreq":
-            cfg_dict["logfreq_path"] = str(_BUNDLED_LOGFREQ)
-            if not _BUNDLED_LOGFREQ.exists():
-                raise FileNotFoundError(
-                    f"mass_mode='logfreq' checkpoint needs the bundled "
-                    f"surprisal table at {_BUNDLED_LOGFREQ}, but it is "
-                    f"missing. Regenerate via "
-                    f"semsimula/notebooks/conservative_arch/"
-                    f"sarf_mass_variant/compute_unigram_frequencies.py."
-                )
-        cfg = SPLMSARFMassLNConfig(**cfg_dict)
-        model = ScalarPotentialLMSARFMassLN(cfg).to(device)
-    elif variant == "sarf_mass":
-        from model_sarf_mass import (
-            ScalarPotentialLMSARFMass,
-            SPLMSARFMassConfig,
-        )
-        if cfg_dict.get("mass_mode") == "logfreq":
-            cfg_dict["logfreq_path"] = str(_BUNDLED_LOGFREQ)
-        cfg = SPLMSARFMassConfig(**cfg_dict)
-        model = ScalarPotentialLMSARFMass(cfg).to(device)
+    raw_cfg = dict(ck["model_cfg"])
+    is_ln = "ln_after_step" in raw_cfg
+    is_sarf = "mass_mode" in raw_cfg
+
+    if is_ln:
+        from model_ln import SPLMSARFMassLNConfig, ScalarPotentialLMSARFMassLN
+        CfgCls = SPLMSARFMassLNConfig
+        ModelCls = ScalarPotentialLMSARFMassLN
+    elif is_sarf:
+        from model_sarf_mass import SPLMSARFMassConfig, ScalarPotentialLMSARFMass
+        CfgCls = SPLMSARFMassConfig
+        ModelCls = ScalarPotentialLMSARFMass
     else:
-        cfg = SPLMConfig(**cfg_dict)
-        model = ScalarPotentialLM(cfg).to(device)
+        CfgCls = SPLMConfig
+        ModelCls = ScalarPotentialLM
 
+    accepted = {f.name for f in dataclasses.fields(CfgCls)}
+    skipped = set(raw_cfg) - accepted
+    filtered = {k: v for k, v in raw_cfg.items() if k in accepted}
+    if skipped:
+        print(f"[extract] note: ignoring extra config keys: {skipped}")
+
+    if filtered.get("mass_mode") == "logfreq":
+        lf_path = filtered.get("logfreq_path")
+        if not lf_path or not Path(lf_path).exists():
+            vocab = filtered.get("vocab_size", 50257)
+            tmp = tempfile.NamedTemporaryFile(suffix=".npy", delete=False)
+            np.save(tmp.name, np.zeros(vocab, dtype=np.float32))
+            filtered["logfreq_path"] = tmp.name
+            print(f"[extract] logfreq_path not found on disk — "
+                  f"created dummy ({vocab} entries); "
+                  f"load_state_dict will overwrite the buffer")
+
+    cfg = CfgCls(**filtered)
+    model = ModelCls(cfg).to(device)
     model.load_state_dict(ck["model_state_dict"])
     model.eval()
-    return model, cfg, variant, ck
+
+    variant = ("sarf_mass_ln" if is_ln else
+               "sarf_mass" if is_sarf else "base")
+    print(f"[extract] loaded {variant} model  d={cfg.d}  L={cfg.L}  "
+          f"max_len={cfg.max_len}")
+    return model, cfg
 
 
 @torch.no_grad()
@@ -149,11 +148,8 @@ def main():
     )
     print(f"[extract] device={device}  ckpt={args.ckpt}")
 
-    model, model_cfg, variant, ck = load_splm_any_variant(
-        Path(args.ckpt), device,
-    )
-    print(f"[extract] loaded model  variant={variant}  d={model_cfg.d}  "
-          f"L={model_cfg.L}  max_len={model_cfg.max_len}")
+    ck = torch.load(args.ckpt, map_location=device, weights_only=False)
+    model, model_cfg = _build_model_from_checkpoint(ck, device)
 
     from transformers import AutoTokenizer
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
@@ -184,7 +180,6 @@ def main():
             "model_cfg": ck["model_cfg"],
             "d": model_cfg.d,
             "L": model_cfg.L,
-            "variant": variant,
         }, f)
     print(f"[extract] saved -> {out_path}")
 

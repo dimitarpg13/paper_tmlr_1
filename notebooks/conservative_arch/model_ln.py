@@ -1,30 +1,35 @@
 """
-SPLM variant: LayerNorm after each damped integration step.
-
-This is the standalone-repo port of the upstream semsimula module
-`notebooks/conservative_arch/energetic_minima/model_ln.py`. It is
-required to load the leak-corrected SPLM positive-control checkpoint
-cited in paper_tmlr_1 §A.3, whose saved `variant` tag is
-"sarf_mass_ln".
+SPLM variant (i) of the energetic-minima study: LayerNorm-after-step.
 
 Architectural idea
 ------------------
-The only change from the SARF-faithful SPLM with per-token semantic
-mass (the `logfreq` variant from `model_sarf_mass.py`) is that after
+The only change from the SARF-faithful SPLM with per-token semantic mass
+(the `sarf_mass_variant` logfreq variant, val ppl 160.55) is that after
 each semi-implicit damped integration step
 
-    v_{l+1} = (v_l + dt * f_l / m) / (1 + dt * gamma)
-    h_{l+1} = h_l + dt * v_{l+1}
+  v_{l+1} = (v_l + dt * f_l / m) / (1 + dt * gamma)
+  h_{l+1} = h_l + dt * v_{l+1}
 
 we project h_{l+1} back to the unit-LayerNorm shell
 
-    h_{l+1} <- (h_{l+1} - mu_{l+1}) / (sigma_{l+1} + eps)
-               per-token mean/variance.
+  h_{l+1} <- (h_{l+1} - mu_{l+1}) / (sigma_{l+1} + eps),     mu, sigma per-token.
 
-Rationale: compactness of S^{d-1} (up to the mean-shift) delivers a
-finite minimum of any continuous V_theta on the shell by the
-extreme-value theorem. This is the cheapest way to buy a finite minimum
-of V without changing V's functional form or its loss-side gauge.
+i.e. the layer-normalisation that all attention transformers apply.
+V_theta is otherwise unchanged (a free MLP head, no structural bound).
+
+Rationale
+---------
+Compactness of S^{d-1} (up to the mean-shift) delivers a finite minimum of
+any continuous V_theta on the shell by the extreme-value theorem.  This
+is the cheapest way to buy a finite minimum of V without changing V's
+functional form or its loss-side gauge.
+
+Empirically this should either (a) leave val perplexity essentially
+unchanged while producing a narrower V_theta range and crisper basins,
+or (b) damage expressivity (by over-constraining h).
+
+Checkpoints tag themselves with variant="sarf_mass_ln" so the
+attractor-extraction dispatcher can load them correctly.
 """
 
 from __future__ import annotations
@@ -118,3 +123,31 @@ class ScalarPotentialLMSARFMassLN(ScalarPotentialLMSARFMass):
                 traj_h.append(h.detach().cpu())
 
         return h, traj_h, traj_xi
+
+
+def smoke_test():
+    torch.manual_seed(0)
+    V = 257
+    cfg = SPLMSARFMassLNConfig(
+        vocab_size=V, d=16, max_len=32, v_hidden=32, v_depth=2, L=4,
+        mass_mode="global",
+    )
+    net = ScalarPotentialLMSARFMassLN(cfg)
+    x = torch.randint(0, V, (2, 16))
+    y = torch.randint(0, V, (2, 16))
+    logits, loss = net(x, y)
+    loss.backward()
+
+    with torch.enable_grad():
+        _, _, traj_h, _ = net(x, y, return_trajectory=True,
+                              return_xi_trajectory=True)
+    last = traj_h[-1]
+    per_tok_norm = last.reshape(-1, cfg.d).pow(2).mean(dim=-1).sqrt()
+    print(f"[LN smoke]  params={net.num_params():,}  loss={loss.item():.4f}")
+    print(f"[LN smoke]  h_L per-token RMS (should be ~1): "
+          f"mean={per_tok_norm.mean().item():.4f}  "
+          f"std={per_tok_norm.std().item():.4e}")
+
+
+if __name__ == "__main__":
+    smoke_test()

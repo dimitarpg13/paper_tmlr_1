@@ -1,44 +1,33 @@
 """
 SARF-faithful scalar-potential LM with per-token semantic mass.
 
-This is the standalone-repo port of the upstream semsimula module
-`notebooks/conservative_arch/sarf_mass_variant/model_sarf_mass.py`.
-It is required to load the leak-corrected SPLM positive-control
-checkpoint cited in paper_tmlr_1 §A.3, which was trained with a
-per-token logfreq-surprisal mass and a fixed damping coefficient.
+Extends sarf_variant/model_sarf.py with three mass parameterisations,
+selected by `cfg.mass_mode`:
 
-Three mass parameterisations are supported, selected by `cfg.mass_mode`:
-
-  - "global"     : single learnable scalar (baseline-equivalent null
-                   control, kept so this module can reproduce the
-                   pre-mass baseline in a single codebase).
-  - "embed_head" : m_t = softplus(<w_m, E[x_t]> + b_m) + eps, i.e. a
-                   cheap linear head on the token embedding. Learned,
-                   position-invariant, content-dependent.
-  - "logfreq"    : m_t = 1 + alpha * (-log p_hat(x_t)), a frozen
-                   unigram-surprisal prior with a single learnable
-                   scale alpha >= 0.
+  - "global"     : single learnable scalar, identical to the SARF baseline.
+                   Included so this module can reproduce the baseline in a
+                   single codebase and act as a null control.
+  - "embed_head" : m_t = softplus(<w_m, E[x_t]> + b_m) + eps, i.e. a cheap
+                   linear head on the token embedding.  Learned, position-
+                   invariant, content-dependent.  Variant (A) of the plan.
+  - "logfreq"    : m_t = 1 + alpha * (-log p_hat(x_t)), a frozen unigram-
+                   surprisal prior with a single learnable scale alpha >= 0.
+                   Variant (B) of the plan.
 
 Everything else (SARF-faithful xi re-pooling, shared V_theta, damped
-Euler-Lagrange integrator with learnable or fixed gamma, tied-embedding
-readout) is identical to the SARF baseline. Mass is computed once per
-forward pass from the first-layer input and held fixed across the L
-integration steps, matching the framework's per-particle-scalar
-prescription (no state-dependence; no layer drift).
+Euler-Lagrange integrator with learnable gamma, tied-embedding readout)
+is identical to the SARF baseline.  The integrator only changes by one
+broadcast: `m` can now be a tensor of shape (B, T, 1) instead of a 0-d
+scalar.
 
-Causal-leak fix (`causal_force=True`, default) detaches the autograd
-path from xi back to h inside the integration loop; this is the
-physics-correct Euler-Lagrange equation
-    m * h_tt = -d V(xi_t, h_t) / d h_t
-as the per-token dynamics. See `docs/Causal_Leak_in_SPLM_*` in the
-upstream repo for the bug-and-fix writeup. The leak-free positive
-control reported in paper_tmlr_1 §A.3 was trained with
-`causal_force=True`.
+Mass is computed once per forward pass from the first-layer input and
+held fixed across the L integration steps, matching the framework's
+per-particle-scalar prescription (no state-dependence; no layer drift).
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
 import torch
@@ -65,11 +54,20 @@ class SPLMSARFMassConfig:
 
     fixed_gamma: Optional[float] = None
 
+    # When True (default), compute ξ from h.detach() inside the integration
+    # loop. This severs the autograd path from ξ back to h, eliminating an
+    # anti-causal leak in the conservative force where ∂V[t']/∂h[t] ≠ 0 for
+    # t' > t (because ξ[t'] is a causal weighted average that includes h[t]).
+    # The fix restores the physics-correct Euler-Lagrange equation
+    #     m · ḧ_t = -∂V(ξ_t, h_t)/∂h_t
+    # as the per-token dynamics. See docs/Causal_Leak_in_SPLM_Integrate_Bug_and_Fix.md
+    # for the full bug-and-fix writeup. Set causal_force=False ONLY to
+    # bit-exactly reproduce pre-fix experiments (e.g. E9 forensics).
     causal_force: bool = True
 
 
 class ScalarPotential(nn.Module):
-    """MLP (xi, h) -> scalar energy. Identical to the SARF baseline."""
+    """MLP (xi, h) -> scalar energy. Identical to SARF baseline."""
 
     def __init__(self, d: int, hidden: int, depth: int):
         super().__init__()
@@ -142,10 +140,12 @@ class ScalarPotentialLMSARFMass(nn.Module):
         elif cfg.mass_mode == "logfreq":
             if cfg.logfreq_path is None:
                 raise ValueError(
-                    "mass_mode='logfreq' requires cfg.logfreq_path (a .npy "
-                    "file with one surprisal value per vocabulary id)."
+                    "mass_mode='logfreq' requires cfg.logfreq_path (a .npy file "
+                    "with one surprisal value per vocabulary id)."
                 )
-            surprisal = torch.from_numpy(_load_npy(cfg.logfreq_path)).float()
+            surprisal = torch.from_numpy(
+                _load_npy(cfg.logfreq_path)
+            ).float()
             if surprisal.numel() != cfg.vocab_size:
                 raise ValueError(
                     f"logfreq vector length {surprisal.numel()} != "
@@ -153,9 +153,7 @@ class ScalarPotentialLMSARFMass(nn.Module):
                 )
             self.register_buffer("logfreq_surprisal", surprisal)
             self.raw_logfreq_alpha = nn.Parameter(
-                torch.tensor(
-                    _raw_from_positive(max(cfg.logfreq_init_alpha, 1e-3))
-                ),
+                torch.tensor(_raw_from_positive(max(cfg.logfreq_init_alpha, 1e-3))),
                 requires_grad=True,
             )
         else:
@@ -175,17 +173,25 @@ class ScalarPotentialLMSARFMass(nn.Module):
         return F.softplus(self.raw_m_bias) + 1e-3
 
     def compute_mass(self, x: torch.Tensor, emb: torch.Tensor) -> torch.Tensor:
+        """Return m as a tensor broadcastable over (B, T, d).
+
+        x:   (B, T)         token ids
+        emb: (B, T, d)      first-layer hidden state E[x] + P
+        """
         cfg = self.cfg
         if cfg.mass_mode == "global":
             return self.m_global
+
         if cfg.mass_mode == "embed_head":
             raw = self.mass_head(self.E(x))
-            return F.softplus(raw + self.raw_m_bias) + 1e-3
+            return (F.softplus(raw + self.raw_m_bias) + 1e-3)
+
         if cfg.mass_mode == "logfreq":
             surprisal = self.logfreq_surprisal[x]
             alpha = F.softplus(self.raw_logfreq_alpha)
             scaled = alpha * surprisal.unsqueeze(-1)
             return F.softplus(self.raw_m_bias + scaled) + 1e-3
+
         raise RuntimeError("unreachable")
 
     def _embed(self, x: torch.Tensor) -> torch.Tensor:
@@ -199,16 +205,22 @@ class ScalarPotentialLMSARFMass(nn.Module):
         emb: torch.Tensor,
         return_trajectory: bool = False,
         return_xi_trajectory: bool = False,
-    ) -> Tuple[torch.Tensor,
-               Optional[List[torch.Tensor]],
-               Optional[List[torch.Tensor]]]:
+    ) -> Tuple[torch.Tensor, Optional[List[torch.Tensor]], Optional[List[torch.Tensor]]]:
+        """SARF-faithful damped EL with per-token mass.
+
+        x:    (B, T)
+        emb:  (B, T, d)   first-layer hidden state (with position embed)
+        """
         cfg = self.cfg
         h = emb
         v = torch.zeros_like(h)
         gamma, dt = self.gamma, cfg.dt
 
         m = self.compute_mass(x, emb)
-        m_b = m
+        if m.dim() == 0:
+            m_b = m
+        else:
+            m_b = m
 
         traj_h: Optional[List[torch.Tensor]] = None
         traj_xi: Optional[List[torch.Tensor]] = None
@@ -270,8 +282,7 @@ class ScalarPotentialLMSARFMass(nn.Module):
 
     @torch.no_grad()
     def generate(self, x: torch.Tensor, max_new_tokens: int,
-                 temperature: float = 1.0,
-                 top_k: Optional[int] = None) -> torch.Tensor:
+                 temperature: float = 1.0, top_k: Optional[int] = None) -> torch.Tensor:
         self.eval()
         for _ in range(max_new_tokens):
             x_cond = x[:, -self.cfg.max_len:]
@@ -288,7 +299,80 @@ class ScalarPotentialLMSARFMass(nn.Module):
     def num_params(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
+    @torch.no_grad()
+    def mass_stats(self, x: torch.Tensor) -> dict:
+        """Diagnostic summary of the per-token mass on a batch of tokens."""
+        emb = self._embed(x)
+        m = self.compute_mass(x, emb)
+        if m.dim() == 0:
+            return {"mean": float(m.item()), "std": 0.0,
+                    "min": float(m.item()), "max": float(m.item())}
+        m_flat = m.reshape(-1)
+        return {
+            "mean": float(m_flat.mean().item()),
+            "std":  float(m_flat.std().item()),
+            "min":  float(m_flat.min().item()),
+            "max":  float(m_flat.max().item()),
+        }
+
 
 def _load_npy(path: str):
     import numpy as np
     return np.load(path)
+
+
+if __name__ == "__main__":
+    import tempfile
+    import numpy as np
+
+    torch.manual_seed(0)
+    V = 257
+
+    print("=" * 60)
+    print("[mass] smoke test: global mass (baseline-equivalent)")
+    cfg = SPLMSARFMassConfig(
+        vocab_size=V, d=16, max_len=32, v_hidden=32, v_depth=2, L=4,
+        mass_mode="global",
+    )
+    net = ScalarPotentialLMSARFMass(cfg)
+    x = torch.randint(0, V, (2, 16))
+    y = torch.randint(0, V, (2, 16))
+    logits, loss = net(x, y)
+    loss.backward()
+    stats = net.mass_stats(x)
+    print(f"  params={net.num_params():,}  loss={loss.item():.4f}  "
+          f"mass mean={stats['mean']:.3f}  std={stats['std']:.3f}")
+
+    print("=" * 60)
+    print("[mass] smoke test: embed_head mass")
+    cfg = SPLMSARFMassConfig(
+        vocab_size=V, d=16, max_len=32, v_hidden=32, v_depth=2, L=4,
+        mass_mode="embed_head",
+    )
+    net = ScalarPotentialLMSARFMass(cfg)
+    logits, loss = net(x, y)
+    loss.backward()
+    stats = net.mass_stats(x)
+    print(f"  params={net.num_params():,}  loss={loss.item():.4f}  "
+          f"mass mean={stats['mean']:.3f}  std={stats['std']:.3f}  "
+          f"min={stats['min']:.3f}  max={stats['max']:.3f}")
+
+    print("=" * 60)
+    print("[mass] smoke test: logfreq mass")
+    with tempfile.NamedTemporaryFile(suffix=".npy", delete=False) as tf:
+        rng = np.random.default_rng(0)
+        surp = rng.uniform(low=1.0, high=12.0, size=V).astype(np.float32)
+        np.save(tf.name, surp)
+        logfreq_path = tf.name
+    cfg = SPLMSARFMassConfig(
+        vocab_size=V, d=16, max_len=32, v_hidden=32, v_depth=2, L=4,
+        mass_mode="logfreq", logfreq_init_alpha=0.1, logfreq_path=logfreq_path,
+    )
+    net = ScalarPotentialLMSARFMass(cfg)
+    logits, loss = net(x, y)
+    loss.backward()
+    stats = net.mass_stats(x)
+    print(f"  params={net.num_params():,}  loss={loss.item():.4f}  "
+          f"mass mean={stats['mean']:.3f}  std={stats['std']:.3f}  "
+          f"min={stats['min']:.3f}  max={stats['max']:.3f}")
+    print("[mass] all three mass modes work end-to-end.")
