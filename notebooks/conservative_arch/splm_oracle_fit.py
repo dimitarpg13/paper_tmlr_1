@@ -68,7 +68,7 @@ def tokenize(sentence: str, max_len: int) -> np.ndarray:
     return np.asarray(ids, dtype=np.int64)
 
 
-def extract_oracle_tuples(model: ScalarPotentialLM, sentence: str, device: str) \
+def extract_oracle_tuples(model, sentence: str, device: str) \
         -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """For a single sentence, re-run SPLM and return
        H   : (L+1, T, d)  raw hidden states  h_l
@@ -81,33 +81,63 @@ def extract_oracle_tuples(model: ScalarPotentialLM, sentence: str, device: str) 
        v_{l+1} = (v_l + dt*f_l/m) / (1 + dt*gamma),  f_l = -grad_h V_theta(xi, h_l)
 
     so Delta h_l := h_{l+1} - h_l depends on (v_l, grad_V at h_l).
+
+    Handles both the base ScalarPotentialLM (fixed xi from _embed_and_pool)
+    and ScalarPotentialLMSARFMass[LN] variants (per-step xi via
+    causal_cumulative_mean, per-token mass, optional LN projection).
     """
+    from model_sarf_mass import ScalarPotentialLMSARFMass, causal_cumulative_mean
+
     max_len = model.cfg.max_len
     ids = tokenize(sentence, max_len)
     x = torch.from_numpy(ids).unsqueeze(0).to(device)
+    cfg = model.cfg
+    is_sarf = isinstance(model, ScalarPotentialLMSARFMass)
+    has_ln = hasattr(model, '_project') and getattr(cfg, 'ln_after_step', False)
 
     with torch.enable_grad():
-        emb, xi = model._embed_and_pool(x)
-        h = emb
+        if is_sarf:
+            emb = model._embed(x)
+            m_b = model.compute_mass(x, emb)
+            gamma = model.gamma
+            h = model._project(emb) if has_ln else emb
+        else:
+            emb, xi_fixed = model._embed_and_pool(x)
+            m_b = model.m
+            gamma = model.gamma
+            h = emb
+
         v = torch.zeros_like(h)
-        dt, m, gamma = model.cfg.dt, model.m, model.gamma
+        dt = cfg.dt
 
         H  = [h.detach().cpu().numpy()[0]]
         GV = []
-        for _ in range(model.cfg.L):
+        xi_out = None
+        for _ in range(cfg.L):
+            if is_sarf:
+                xi_input = h.detach() if getattr(cfg, 'causal_force', True) else h
+                xi_now = causal_cumulative_mean(xi_input)
+            else:
+                xi_now = xi_fixed
+
             h_in = h.detach().requires_grad_(True)
-            V_out = model.V_theta(xi, h_in).sum()
+            V_out = model.V_theta(xi_now, h_in).sum()
             grad_V, = torch.autograd.grad(V_out, h_in)
             GV.append(grad_V.detach().cpu().numpy()[0])
             f = -grad_V
-            v = (v + dt * f / m) / (1.0 + dt * gamma)
-            h = h_in + dt * v
+            v = (v + dt * f / m_b) / (1.0 + dt * gamma)
+            h_new = h_in + dt * v
+            if has_ln:
+                h_new = model._project(h_new)
+            h = h_new
             H.append(h.detach().cpu().numpy()[0])
+            if xi_out is None:
+                xi_out = xi_now
 
-    return (np.stack(H, axis=0).astype(np.float32),         # (L+1, T, d)
-            np.stack(GV, axis=0).astype(np.float32),        # (L, T, d)
-            xi.detach().cpu().numpy()[0].astype(np.float32) # (T, d)
-            )
+    xi_np = xi_out.detach().cpu().numpy()[0].astype(np.float32)
+    return (np.stack(H, axis=0).astype(np.float32),
+            np.stack(GV, axis=0).astype(np.float32),
+            xi_np)
 
 
 # ---------------------------------------------------------------------------
