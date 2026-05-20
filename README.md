@@ -27,10 +27,10 @@ The repository carries exactly the experiments described in the paper:
 | §5 | Mechanical content: tangential-vs-normal acceleration, deceleration sign, permutation null | [`notebooks/stp_loss/`](notebooks/stp_loss/) |
 | §6 | Cross-architecture replication on Pythia-160M | [`notebooks/cross_model/`](notebooks/cross_model/) |
 | §7 | Velocity-aware Jacobian-symmetry test at PCA-16; shared-potential regression methodology | [`notebooks/conservative_arch/jacobian_symmetry.py`](notebooks/conservative_arch/jacobian_symmetry.py), [`notebooks/conservative_arch/shared_potential_fit.py`](notebooks/conservative_arch/shared_potential_fit.py) |
-| §8 | Three-way architectural separator (SPLM positive control / matched-attention 8M / pretrained GPT-2 small) at *R²* = 0.949 / 0.56 / 0.45 | [`notebooks/conservative_arch/run_full_pipeline.py`](notebooks/conservative_arch/run_full_pipeline.py), [`notebooks/conservative_arch/plot_three_way_comparison.py`](notebooks/conservative_arch/plot_three_way_comparison.py) |
+| §8 | Three-way architectural separator (SPLM positive control / matched-attention 8M / pretrained GPT-2 small) at *R²* = 0.957 / 0.54 / 0.46 | [`notebooks/conservative_arch/run_full_pipeline.py`](notebooks/conservative_arch/run_full_pipeline.py), [`notebooks/conservative_arch/plot_three_way_comparison.py`](notebooks/conservative_arch/plot_three_way_comparison.py) |
 | §8.2--§8.3 | SPLM positive control: model definition and training | [`notebooks/conservative_arch/model.py`](notebooks/conservative_arch/model.py), [`notebooks/conservative_arch/train_splm.py`](notebooks/conservative_arch/train_splm.py) |
 | §8.4 | Matched-attention 8M-parameter GPT-2-style decoder baseline | [`notebooks/conservative_arch/matched_baseline_model.py`](notebooks/conservative_arch/matched_baseline_model.py), [`notebooks/conservative_arch/train_matched.py`](notebooks/conservative_arch/train_matched.py) |
-| §9.1 | Oracle fit *R²* = 1.0000 (uses positive control's own potential as *V_ψ*) | [`notebooks/conservative_arch/splm_oracle_fit.py`](notebooks/conservative_arch/splm_oracle_fit.py) |
+| §9.1 | Oracle fit: *R²* = 0.931 on the LayerNorm variant / 1.0000 on the base architecture (uses positive control's own potential as *V_ψ*) | [`notebooks/conservative_arch/splm_oracle_fit.py`](notebooks/conservative_arch/splm_oracle_fit.py) |
 | §9.2 | *V_ψ* capacity sweep over a 16× parameter band | [`notebooks/conservative_arch/sharedV_capacity_sweep.py`](notebooks/conservative_arch/sharedV_capacity_sweep.py) |
 | §9.3 | Coordinate-system robustness under token-direction coordinates | [`notebooks/conservative_arch/token_direction_fit.py`](notebooks/conservative_arch/token_direction_fit.py) |
 | §A.3 | Leak-corrected re-measurement of the SPLM positive control's *R²* | [`notebooks/conservative_arch/ln_damping_sweep/`](notebooks/conservative_arch/ln_damping_sweep/) + [`notebooks/conservative_arch/causal_probe.py`](notebooks/conservative_arch/causal_probe.py) + [`notebooks/conservative_arch/eval_ppl_under_fix.py`](notebooks/conservative_arch/eval_ppl_under_fix.py) |
@@ -92,7 +92,7 @@ sub-directory's README.
 The code targets Python 3.10 or later.
 
 ```bash
-git clone <repo-url> paper_tmlr_1
+git clone https://github.com/dimitarpg13/paper_tmlr_1
 cd paper_tmlr_1
 python -m venv .venv
 source .venv/bin/activate
@@ -179,13 +179,13 @@ This trains the SPLM positive control and the matched-attention 8M
 baseline if their checkpoints are not present in `checkpoints/`, then
 runs the off-line OLS-on-frozen-tensors shared-potential regression of
 §7 against each of the three architectures, and reports the
-*R²* = 0.949 / 0.56 / 0.45 three-way separator.
+*R²* = 0.957 / 0.54 / 0.46 three-way separator.
 
 ### §9 Internal-validity controls
 
 ```bash
 cd notebooks/conservative_arch/
-python splm_oracle_fit.py            # §9.1 oracle R² = 1.0000
+python splm_oracle_fit.py            # §9.1 oracle R² = 0.931 (LN) / 1.0000 (base)
 python sharedV_capacity_sweep.py     # §9.2 16x parameter sweep
 python token_direction_fit.py        # §9.3 token-direction coords
 ```
@@ -198,12 +198,12 @@ python causal_probe.py               # verifies the closed-loop Jacobian
                                      #   ∂loss_t / ∂h_s vanishes for s > t
 cd ln_damping_sweep/
 python train_splm_em_ln.py --gamma 0.10 --seed 0   # leak-free retrain
-python analyse_sweep.py              # confirms R² = 0.949 on the
+python analyse_sweep.py              # confirms R² = 0.957 on the
                                      #   leak-corrected checkpoint
 ```
 
 The forensic detail of the leak bug and its fix is documented at
-[`docs/Causal_Leak_in_SPLM_Integrate_Bug_and_Fix.md`](docs/Causal_Leak_in_SPLM_Integrate_Bug_and_Fix.md) (to be added).
+[`docs/Causal_Leak_in_SPLM_Integrate_Bug_and_Fix.md`](docs/Causal_Leak_in_SPLM_Integrate_Bug_and_Fix.md).
 
 ---
 
@@ -214,9 +214,8 @@ The following extensions live in
 and are **not** part of `paper_tmlr_1` as submitted. They are
 robustness checks whose outcome determines a small set of conditional
 paper edits before TMLR submission. The decision rules and
-paper-update policies are specified in companion notes in the main
-[`semsimula`](https://github.com/dimitarpg13/semsimula) repository
-under `docs/`.
+paper-update policies are specified in the companion notes that
+accompany the paper's development history.
 
 ### §5.1 PCA-symmetry sweep (≲30 min on H100; ≲1 h with all four architectures)
 
