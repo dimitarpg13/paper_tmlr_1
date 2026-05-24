@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it as below."
+title: "Locally Conservative, Globally Not: Diagnosing the Lagrangian Structure of Pretrained Transformers"
+authors:
+  - family-names: Gueorguiev
+    given-names: Dimitar P.
+    email: dimitar.pg13+research@gmail.com
+    affiliation: Independent Researcher
+type: article
+date-released: 2026-05-20
+version: "1.0"
+license: CC-BY-4.0
+repository-code: "https://github.com/dimitarpg13/paper_tmlr_1"
+keywords:
+  - Semantic Tube Prediction
+  - Lagrangian Mechanics
+  - Helmholtz Decomposition
+  - Joint Embedding Predictive Architectures
+  - Transformer Representations
+  - Conservative Vector Fields
+  - Mechanistic Interpretability
+  - Shared-Potential Separator
+  - Geodesic Hypothesis
+preferred-citation:
+  type: article
+  title: "Locally Conservative, Globally Not: Diagnosing the Lagrangian Structure of Pretrained Transformers"
+  authors:
+    - family-names: Gueorguiev
+      given-names: Dimitar P.
+  journal: "Transactions on Machine Learning Research (under review)"
+  year: 2026
