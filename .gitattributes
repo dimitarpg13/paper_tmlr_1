@@ -1,0 +1,2 @@
+docs/Deep_Dive_in_the_SPLM_model_and_code.docx filter=lfs diff=lfs merge=lfs -text
+docs/Deep_Dive_in_the_SPLM_model_and_code.pdf filter=lfs diff=lfs merge=lfs -text
