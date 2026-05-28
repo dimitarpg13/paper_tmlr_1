@@ -50,6 +50,18 @@ paper_tmlr_1/
 ├── .gitignore                     # excludes checkpoints, parquets, caches
 ├── requirements.txt               # pinned dependencies
 │
+├── docs/                          # supplementary documentation
+│   ├── Causal_Leak_in_SPLM_Integrate_Bug_and_Fix.md
+│   │                              # forensic account of the causal-leak bug
+│   │                              # and its fix (referenced in §A.3)
+│   ├── Deep_Dive_in_the_SPLM_model_and_code.docx
+│   │                              # detailed walkthrough of the SPLM model
+│   │                              # architecture, notation, and codebase
+│   │                              # intended for reviewers and readers who
+│   │                              # want to map paper symbols to source code
+│   └── Deep_Dive_in_the_SPLM_model_and_code.pdf
+│                                  # PDF rendering of the above
+│
 ├── notebooks/                     # source code for every experiment
 │   ├── stp_loss/                  # §3 / §4 / §5 STP–acceleration identity
 │   ├── cross_model/               # §6 Pythia-160M replication
@@ -80,10 +92,10 @@ paper_tmlr_1/
 
 `data/`, `checkpoints/`, `figures/`, and `results/` are kept as empty
 directories with a `README.md` documenting how to regenerate or fetch
-their contents. The repository itself ships only source code; large
-binary artifacts (PyTorch checkpoints, Parquet datasets, trajectory
-pickles) are excluded by `.gitignore` and described in each
-sub-directory's README.
+their contents. The repository itself ships only source code and
+documentation; large binary artifacts (PyTorch checkpoints, Parquet
+datasets, trajectory pickles) are excluded by `.gitignore` and
+described in each sub-directory's README.
 
 ---
 
@@ -204,6 +216,15 @@ python analyse_sweep.py              # confirms R² = 0.957 on the
 
 The forensic detail of the leak bug and its fix is documented at
 [`docs/Causal_Leak_in_SPLM_Integrate_Bug_and_Fix.md`](docs/Causal_Leak_in_SPLM_Integrate_Bug_and_Fix.md).
+
+---
+
+## Supplementary documentation (`docs/`)
+
+| Document | Format | Purpose |
+|---|---|---|
+| [`Causal_Leak_in_SPLM_Integrate_Bug_and_Fix.md`](docs/Causal_Leak_in_SPLM_Integrate_Bug_and_Fix.md) | Markdown | Forensic account of the causal-leak bug discovered in the original SPLM integrator and its fix; referenced in §A.3 of the paper. |
+| [`Deep_Dive_in_the_SPLM_model_and_code.docx`](docs/Deep_Dive_in_the_SPLM_model_and_code.docx) | Word / PDF | Detailed walkthrough of the SPLM model architecture, parameter notation, and codebase. Intended for reviewers and readers who want to map paper symbols (e.g. $V_\theta$, $\gamma$, $\alpha$, $\Delta h_\ell$) to their corresponding source-code identifiers and understand the implementation decisions. The PDF rendering is provided alongside for convenience. |
 
 ---
 
