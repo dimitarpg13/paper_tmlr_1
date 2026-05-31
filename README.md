@@ -208,8 +208,11 @@ python token_direction_fit.py        # §9.3 token-direction coords
 cd notebooks/conservative_arch/
 python causal_probe.py               # verifies the closed-loop Jacobian
                                      #   ∂loss_t / ∂h_s vanishes for s > t
+python make_checkpoints.py --which splm   # leak-free retrain ->
+                                     #   checkpoints/splm_em_ln_leakfree_gamma0p10_seed0_ckpt_latest.pt
+                                     #   (wraps ln_damping_sweep/train_splm_em_ln.py
+                                     #    --mode shakespeare --fixed-gamma 0.10 --seed 0)
 cd ln_damping_sweep/
-python train_splm_em_ln.py --gamma 0.10 --seed 0   # leak-free retrain
 python analyse_sweep.py              # confirms R² = 0.957 on the
                                      #   leak-corrected checkpoint
 ```
