@@ -50,25 +50,13 @@ import numpy as np
 import torch
 
 THIS_DIR = Path(__file__).parent
-for sub in ("", "sarf_mass_variant", "energetic_minima", "multixi", "scaleup"):
-    sys.path.insert(0, str(THIS_DIR / sub))
+sys.path.insert(0, str(THIS_DIR))
 
 from data_module import (  # type: ignore  # noqa: E402
     get_batch, load_tiny_stories, load_tiny_shakespeare,
 )
 from model_ln import (  # type: ignore  # noqa: E402
     SPLMSARFMassLNConfig, ScalarPotentialLMSARFMassLN,
-)
-from model_multixi import (  # type: ignore  # noqa: E402
-    SPLMSARFMassLNMultiXiConfig, ScalarPotentialLMSARFMassLNMultiXi,
-)
-
-# first_order_ablation lives under conservative_arch/ but its module path is
-# `first_order_ablation.model_first_order`. Add the parent dir to sys.path
-# so the import resolves the package directly.
-sys.path.insert(0, str(THIS_DIR / "first_order_ablation"))
-from model_first_order import (  # type: ignore  # noqa: E402
-    SPLMFirstOrderConfig, ScalarPotentialLMFirstOrder,
 )
 
 
@@ -86,17 +74,43 @@ from model_first_order import (  # type: ignore  # noqa: E402
 # is the `integrate()` method (first-order gradient flow vs second-order
 # damped semi-implicit Euler). Without the variant-id check, a SPLM-1 ckpt
 # silently loads into the second-order class and produces wrong val_ppl.
+#
+# `paper_tmlr_1` ships only the single-ξ SPLM (`sarf_mass_ln`); this is the
+# checkpoint family used by the §A.3 leak-free PPL measurement. Extension
+# variants (multi-ξ, first-order ablation) are not part of this repository,
+# so their registry entries are added opportunistically only if the matching
+# modules happen to be importable, and are otherwise skipped.
 _REGISTRY = [
-    ("multixi (K-channel ξ)",
-     "sarf_mass_ln_multixi",
-     SPLMSARFMassLNMultiXiConfig, ScalarPotentialLMSARFMassLNMultiXi),
-    ("first_order (gradient-flow ablation)",
-     "splm_first_order",
-     SPLMFirstOrderConfig, ScalarPotentialLMFirstOrder),
     ("sarf_mass_ln (single ξ, second-order)",
      "sarf_mass_ln",
      SPLMSARFMassLNConfig, ScalarPotentialLMSARFMassLN),
 ]
+
+try:  # first-order gradient-flow ablation — optional, not shipped here
+    sys.path.insert(0, str(THIS_DIR / "first_order_ablation"))
+    from model_first_order import (  # type: ignore  # noqa: E402
+        SPLMFirstOrderConfig, ScalarPotentialLMFirstOrder,
+    )
+    _REGISTRY.insert(0, (
+        "first_order (gradient-flow ablation)",
+        "splm_first_order",
+        SPLMFirstOrderConfig, ScalarPotentialLMFirstOrder,
+    ))
+except Exception:
+    pass
+
+try:  # multi-ξ (K-channel) variant — optional, not shipped here
+    sys.path.insert(0, str(THIS_DIR / "multixi"))
+    from model_multixi import (  # type: ignore  # noqa: E402
+        SPLMSARFMassLNMultiXiConfig, ScalarPotentialLMSARFMassLNMultiXi,
+    )
+    _REGISTRY.insert(0, (
+        "multixi (K-channel ξ)",
+        "sarf_mass_ln_multixi",
+        SPLMSARFMassLNMultiXiConfig, ScalarPotentialLMSARFMassLNMultiXi,
+    ))
+except Exception:
+    pass
 
 
 def _try_load(cfg_cls, model_cls, cfg_dict, state_dict):

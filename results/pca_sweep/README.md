@@ -7,15 +7,12 @@ Jacobian-symmetry local-conservativity finding of `paper_tmlr_1`
 hidden-state trajectories that the paper §7.2 reports at PCA-16.
 
 These artefacts back the one-paragraph **"Robustness under the
-PCA-dimension choice"** footnote in `paper_tmlr_1` §7.2 and the
-§4.2 falsification block of the `q9e_n` verdict note in the
-[`semsimula` repo's `docs/`](https://github.com/dimitarpg13/semsimula/blob/main/docs/SP_HSPLM_Stage_2_q9e_n_verdict_and_structural_reexamination.md)
-(mirrored to [`semsimula-paper/companion_notes/`](https://github.com/dimitarpg13/semsimula-paper/blob/main/companion_notes/SP_HSPLM_Stage_2_q9e_n_verdict_and_structural_reexamination.md)).
+PCA-dimension choice"** footnote in `paper_tmlr_1` §7.2.
 
 The harness that produced them lives in
 [`../../notebooks/conservative_arch/scripts/`](../../notebooks/conservative_arch/scripts/);
-the verdict note's §5.1 is the canonical decision rule for the
-classification recorded below.
+the decision rule for the classification recorded below is given in
+the [Decision rule](#decision-rule) section.
 
 ## Provenance
 
@@ -27,7 +24,7 @@ classification recorded below.
 | Aggregator | [`notebooks/conservative_arch/scripts/aggregate_pca_sweep.py`](../../notebooks/conservative_arch/scripts/aggregate_pca_sweep.py) |
 | Diagnostic | [`notebooks/conservative_arch/jacobian_symmetry.py`](../../notebooks/conservative_arch/jacobian_symmetry.py) (velocity-aware variant; `paper_tmlr_1` §7.2 protocol) |
 | Architectures | `gpt2` (pretrained GPT-2 small, $d = 768$, $L = 12$); `EleutherAI/pythia-160m` (pretrained Pythia-160M, $d = 768$, $L = 12$) |
-| PCA dimensions | $\{16, 32\}$ (the well-conditioned-regression regime; PCA-64+ requires ridge and was not pursued — see §5.1 of the verdict note) |
+| PCA dimensions | $\{16, 32\}$ (the well-conditioned-regression regime; PCA-64+ requires ridge and was not pursued — see "Why no PCA-64+ in this sweep?" below) |
 | Sentences | 40 train / 10 test per architecture |
 | Random seed | 0 |
 
@@ -40,8 +37,7 @@ classification recorded below.
 
 **Overall verdict: REJECTED** — the PCA-16 local-conservativity
 finding is robust under the increase to PCA-32 on both tested
-architectures; the H2 "PCA-16 artefact" hypothesis (verdict
-note §4.2) is falsified.
+architectures; the "PCA-16 artefact" hypothesis is falsified.
 
 ## Files
 
@@ -64,18 +60,17 @@ Pattern: `splm_<arch>_pca<k>_jacsym_*` for `arch ∈ {gpt2, pythia}`, `k ∈ {16
 | `*_jacsym_summary.md` | Per-architecture, per-PCA-k human-readable summary with the full per-layer fit-quality table and verdict. |
 | `*_fig_jacsym.png` | Side-by-side position-only vs velocity-aware fit profile. |
 
-## Decision rule (verbatim from §5.1 of the verdict note)
+## Decision rule
 
 | Outcome | Max-layer TEST gap at largest tested PCA-k | Paper-edit implication |
 |---|---|---|
-| **H2 REJECTED** | $\le 0.10$ | `paper_tmlr_1` §7.2 stands; optional 1-paragraph robustness footnote before submission. |
-| **H2 PARTIAL** | $(0.10, 0.20]$ | One-paragraph scope-of-claim sharpening to §7.2. |
-| **H2 CONFIRMED** | $> 0.20$ | Substantive rewrite of §7.2 framing and the introduction's contribution claims. (The §8 three-way separator headline $R^2 = 0.949 / 0.56 / 0.45$ is unaffected and in fact *strengthens* under this reading.) |
+| **REJECTED** | $\le 0.10$ | `paper_tmlr_1` §7.2 stands; optional 1-paragraph robustness footnote before submission. |
+| **PARTIAL** | $(0.10, 0.20]$ | One-paragraph scope-of-claim sharpening to §7.2. |
+| **CONFIRMED** | $> 0.20$ | Substantive rewrite of §7.2 framing and the introduction's contribution claims. (The §8 three-way separator headline $R^2 = 0.949 / 0.56 / 0.45$ is unaffected and in fact *strengthens* under this reading.) |
 
 Both `gpt2` and `pythia` land in the REJECTED column, so the
 licensed paper edit is the one-paragraph robustness footnote
-(landed in `paper_tmlr_1` §7.2 on 2026-05-17, commit
-[`7242b0e`](https://github.com/dimitarpg13/semsimula/commit/7242b0e)).
+(landed in `paper_tmlr_1` §7.2 on 2026-05-17, commit `7242b0e`).
 
 ## Why no PCA-64+ in this sweep?
 
@@ -111,5 +106,3 @@ at via `--out-dir`.
 ## Cross-references
 
 - `paper_tmlr_1` §7.2 — the paragraph "Robustness under the PCA-dimension choice" cites the headline numbers in this directory and the verdict.
-- [`SP_HSPLM_Stage_2_q9e_n_verdict_and_structural_reexamination.md`](https://github.com/dimitarpg13/semsimula/blob/main/docs/SP_HSPLM_Stage_2_q9e_n_verdict_and_structural_reexamination.md) §4.2 — full falsification block for the H2 hypothesis; §5.1 — the executed-protocol record and decision-rule application.
-- [`semsimula-paper/companion_notes/...`](https://github.com/dimitarpg13/semsimula-paper/blob/main/companion_notes/SP_HSPLM_Stage_2_q9e_n_verdict_and_structural_reexamination.md) — mirror of the verdict note.

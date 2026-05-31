@@ -117,161 +117,182 @@ def _registry() -> List[ModelEntry]:
     # E12 HiPPO multi-channel ξ — most specific (HiPPO state-space replaces
     # the K-EMA bank). Listed first so its config-shape dispatch wins over
     # the K-EMA variant when a HiPPO ckpt is loaded.
-    from model_multixi_hippo import (  # type: ignore
-        SPLMSARFMassLNMultiHiPPOConfig, ScalarPotentialLMSARFMassLNMultiHiPPO,
-    )
-
-    def _cfg_multihippo(causal: Optional[bool]) -> object:
-        return SPLMSARFMassLNMultiHiPPOConfig(
-            vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
-            mass_mode="global", ln_after_step=True,
-            xi_channels=4, xi_basis="legt", xi_theta=64.0,
-            causal_force=True if causal is None else causal,
+    # Optional extension variant — not shipped with paper_tmlr_1; skipped if
+    # its module is absent so the core single-ξ SPLM probe still runs.
+    try:
+        from model_multixi_hippo import (  # type: ignore
+            SPLMSARFMassLNMultiHiPPOConfig, ScalarPotentialLMSARFMassLNMultiHiPPO,
         )
-    out.append(ModelEntry(
-        "multixi-hippo (K=4 LegT)", _cfg_multihippo,
-        ScalarPotentialLMSARFMassLNMultiHiPPO,
-    ))
 
-    def _cfg_multihippo_learndt(causal: Optional[bool]) -> object:
-        return SPLMSARFMassLNMultiHiPPOConfig(
-            vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
-            mass_mode="global", ln_after_step=True,
-            xi_channels=4, xi_basis="legt", xi_theta=64.0,
-            xi_learnable_dt=True,
-            causal_force=True if causal is None else causal,
-        )
-    out.append(ModelEntry(
-        "multixi-hippo (K=4 LegT, learnable dt)", _cfg_multihippo_learndt,
-        ScalarPotentialLMSARFMassLNMultiHiPPO,
-    ))
+        def _cfg_multihippo(causal: Optional[bool]) -> object:
+            return SPLMSARFMassLNMultiHiPPOConfig(
+                vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
+                mass_mode="global", ln_after_step=True,
+                xi_channels=4, xi_basis="legt", xi_theta=64.0,
+                causal_force=True if causal is None else causal,
+            )
+        out.append(ModelEntry(
+            "multixi-hippo (K=4 LegT)", _cfg_multihippo,
+            ScalarPotentialLMSARFMassLNMultiHiPPO,
+        ))
+
+        def _cfg_multihippo_learndt(causal: Optional[bool]) -> object:
+            return SPLMSARFMassLNMultiHiPPOConfig(
+                vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
+                mass_mode="global", ln_after_step=True,
+                xi_channels=4, xi_basis="legt", xi_theta=64.0,
+                xi_learnable_dt=True,
+                causal_force=True if causal is None else causal,
+            )
+        out.append(ModelEntry(
+            "multixi-hippo (K=4 LegT, learnable dt)", _cfg_multihippo_learndt,
+            ScalarPotentialLMSARFMassLNMultiHiPPO,
+        ))
+    except Exception:
+        pass
 
     # E13 S4D multi-channel ξ — diagonal-complex-A learnable basis (R6.i+).
     # Most specific config-shape variant within the multixi family.
-    from model_multixi_s4d import (  # type: ignore
-        SPLMSARFMassLNMultiS4DConfig, ScalarPotentialLMSARFMassLNMultiS4D,
-    )
-
-    def _cfg_multis4d_legt(causal: Optional[bool]) -> object:
-        return SPLMSARFMassLNMultiS4DConfig(
-            vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
-            mass_mode="global", ln_after_step=True,
-            xi_channels=4, xi_theta=64.0, xi_eigval_init="legt",
-            xi_learnable_dt=True, xi_learnable_B=True,
-            causal_force=True if causal is None else causal,
+    # Optional extension variant — not shipped with paper_tmlr_1.
+    try:
+        from model_multixi_s4d import (  # type: ignore
+            SPLMSARFMassLNMultiS4DConfig, ScalarPotentialLMSARFMassLNMultiS4D,
         )
-    out.append(ModelEntry(
-        "multixi-s4d (K=4, legt-init)", _cfg_multis4d_legt,
-        ScalarPotentialLMSARFMassLNMultiS4D,
-    ))
 
-    def _cfg_multis4d_lin(causal: Optional[bool]) -> object:
-        return SPLMSARFMassLNMultiS4DConfig(
-            vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
-            mass_mode="global", ln_after_step=True,
-            xi_channels=4, xi_theta=64.0, xi_eigval_init="s4d_lin",
-            xi_learnable_dt=True, xi_learnable_B=True,
-            causal_force=True if causal is None else causal,
-        )
-    out.append(ModelEntry(
-        "multixi-s4d (K=4, s4d_lin-init)", _cfg_multis4d_lin,
-        ScalarPotentialLMSARFMassLNMultiS4D,
-    ))
+        def _cfg_multis4d_legt(causal: Optional[bool]) -> object:
+            return SPLMSARFMassLNMultiS4DConfig(
+                vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
+                mass_mode="global", ln_after_step=True,
+                xi_channels=4, xi_theta=64.0, xi_eigval_init="legt",
+                xi_learnable_dt=True, xi_learnable_B=True,
+                causal_force=True if causal is None else causal,
+            )
+        out.append(ModelEntry(
+            "multixi-s4d (K=4, legt-init)", _cfg_multis4d_legt,
+            ScalarPotentialLMSARFMassLNMultiS4D,
+        ))
+
+        def _cfg_multis4d_lin(causal: Optional[bool]) -> object:
+            return SPLMSARFMassLNMultiS4DConfig(
+                vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
+                mass_mode="global", ln_after_step=True,
+                xi_channels=4, xi_theta=64.0, xi_eigval_init="s4d_lin",
+                xi_learnable_dt=True, xi_learnable_B=True,
+                causal_force=True if causal is None else causal,
+            )
+        out.append(ModelEntry(
+            "multixi-s4d (K=4, s4d_lin-init)", _cfg_multis4d_lin,
+            ScalarPotentialLMSARFMassLNMultiS4D,
+        ))
+    except Exception:
+        pass
 
     # E11 multi-channel ξ — K-EMA bank (the previous, redundant baseline).
-    from model_multixi import (  # type: ignore
-        SPLMSARFMassLNMultiXiConfig, ScalarPotentialLMSARFMassLNMultiXi,
-    )
-
-    def _cfg_multixi(causal: Optional[bool]) -> object:
-        return SPLMSARFMassLNMultiXiConfig(
-            vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
-            mass_mode="global", ln_after_step=True,
-            xi_channels=4, xi_alpha_inits=[0.0, 0.5, 0.9, 0.99],
-            xi_learnable=True,
-            causal_force=True if causal is None else causal,
+    # Optional extension variant — not shipped with paper_tmlr_1.
+    try:
+        from model_multixi import (  # type: ignore
+            SPLMSARFMassLNMultiXiConfig, ScalarPotentialLMSARFMassLNMultiXi,
         )
-    out.append(ModelEntry(
-        "multixi (K=4 EMAs)", _cfg_multixi, ScalarPotentialLMSARFMassLNMultiXi,
-    ))
 
-    # R6.h.1 (Fix 2): K-EMA bank with log-spaced α-init.
-    # The init mode is the only difference from the explicit-α variant
-    # above; α-values are computed from K and τ_max at __init__ time.
-    # No new gradient pathway → causality is identical, but we still
-    # exercise this through the strict probe per regression discipline.
-    def _cfg_multixi_logspaced(causal: Optional[bool]) -> object:
-        return SPLMSARFMassLNMultiXiConfig(
-            vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
-            mass_mode="global", ln_after_step=True,
-            xi_channels=4, xi_alpha_inits=[0.0, 0.0, 0.0, 0.0],
-            xi_alpha_init_mode="log_spaced", xi_tau_max=100.0,
-            xi_learnable=True,
-            causal_force=True if causal is None else causal,
-        )
-    out.append(ModelEntry(
-        "multixi (K=4 EMAs, log-spaced α, τ_max=100)",
-        _cfg_multixi_logspaced, ScalarPotentialLMSARFMassLNMultiXi,
-    ))
+        def _cfg_multixi(causal: Optional[bool]) -> object:
+            return SPLMSARFMassLNMultiXiConfig(
+                vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
+                mass_mode="global", ln_after_step=True,
+                xi_channels=4, xi_alpha_inits=[0.0, 0.5, 0.9, 0.99],
+                xi_learnable=True,
+                causal_force=True if causal is None else causal,
+            )
+        out.append(ModelEntry(
+            "multixi (K=4 EMAs)", _cfg_multixi, ScalarPotentialLMSARFMassLNMultiXi,
+        ))
+
+        # R6.h.1 (Fix 2): K-EMA bank with log-spaced α-init.
+        # The init mode is the only difference from the explicit-α variant
+        # above; α-values are computed from K and τ_max at __init__ time.
+        # No new gradient pathway → causality is identical, but we still
+        # exercise this through the strict probe per regression discipline.
+        def _cfg_multixi_logspaced(causal: Optional[bool]) -> object:
+            return SPLMSARFMassLNMultiXiConfig(
+                vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
+                mass_mode="global", ln_after_step=True,
+                xi_channels=4, xi_alpha_inits=[0.0, 0.0, 0.0, 0.0],
+                xi_alpha_init_mode="log_spaced", xi_tau_max=100.0,
+                xi_learnable=True,
+                causal_force=True if causal is None else causal,
+            )
+        out.append(ModelEntry(
+            "multixi (K=4 EMAs, log-spaced α, τ_max=100)",
+            _cfg_multixi_logspaced, ScalarPotentialLMSARFMassLNMultiXi,
+        ))
+    except Exception:
+        pass
 
     # SP-HSPLM Stage 1 — SPLM em_ln + per-token non-conservative force.
     # Has the same state_dict shape as sarf_mass_ln plus extra parameters
     # under .nonconservative.* . Listed before _ln so SP-HSPLM Stage 1
     # ckpts go to the correct class by default.
-    from model_splm_nonconservative import (  # type: ignore
-        SPLMNonConservativeConfig, ScalarPotentialLMNonConservative, CELLS,
-    )
+    # Optional extension variant — not shipped with paper_tmlr_1.
+    try:
+        from model_splm_nonconservative import (  # type: ignore
+            SPLMNonConservativeConfig, ScalarPotentialLMNonConservative, CELLS,
+        )
 
-    def _cfg_nonconservative_factory(cell: str):
-        def _cfg(causal: Optional[bool]) -> object:
-            return SPLMNonConservativeConfig(
-                vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
-                mass_mode="global", ln_after_step=True,
-                cell=cell,
-                causal_force=True if causal is None else causal,
-            )
-        return _cfg
+        def _cfg_nonconservative_factory(cell: str):
+            def _cfg(causal: Optional[bool]) -> object:
+                return SPLMNonConservativeConfig(
+                    vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
+                    mass_mode="global", ln_after_step=True,
+                    cell=cell,
+                    causal_force=True if causal is None else causal,
+                )
+            return _cfg
 
-    for cell in CELLS:
-        out.append(ModelEntry(
-            f"sp_hsplm_stage1_{cell}",
-            _cfg_nonconservative_factory(cell),
-            ScalarPotentialLMNonConservative,
-        ))
+        for cell in CELLS:
+            out.append(ModelEntry(
+                f"sp_hsplm_stage1_{cell}",
+                _cfg_nonconservative_factory(cell),
+                ScalarPotentialLMNonConservative,
+            ))
+    except Exception:
+        pass
 
     # SP-HSPLM Stage 2 — pair-skew Q9(e) cell ladder.
     # Listed before _ln (and before SparsePARFLM) so SP-HSPLM ckpts are
     # matched by their richer config (schedule + kernel_rank + gyro fields).
-    from model_sphsplm import (  # type: ignore
-        SPHSPLMConfig, ScalarPotentialLMSPHSPLM,
-        CELLS as SPHSPLM_CELLS, _stage2_cell_kwargs,
-    )
+    # Optional extension variant — not shipped with paper_tmlr_1.
+    try:
+        from model_sphsplm import (  # type: ignore
+            SPHSPLMConfig, ScalarPotentialLMSPHSPLM,
+            CELLS as SPHSPLM_CELLS, _stage2_cell_kwargs,
+        )
 
-    def _cfg_sphsplm_factory(cell: str):
-        def _cfg(causal: Optional[bool]) -> object:
-            base = dict(
-                vocab_size=257, d=16, max_len=64, L=4,
-                v_hidden=32, v_depth=2,
-                v_phi_d_type=4, v_phi_d_angle=2,
-                v_phi_phi_hidden=8, v_phi_theta_hidden=8,
-                v_phi_mlp_hidden=16,
-                mass_mode="global", ln_after_step=True,
-                score_head_hidden=8,
-                kernel_rank=4, kernel_init_scale=0.02,
-                gyro_rank=4, gyro_init_scale=0.02,
-                gamma_min=0.05,
-                causal_force=True if causal is None else causal,
-            )
-            kwargs = _stage2_cell_kwargs(cell, base)
-            return SPHSPLMConfig(**kwargs)
-        return _cfg
+        def _cfg_sphsplm_factory(cell: str):
+            def _cfg(causal: Optional[bool]) -> object:
+                base = dict(
+                    vocab_size=257, d=16, max_len=64, L=4,
+                    v_hidden=32, v_depth=2,
+                    v_phi_d_type=4, v_phi_d_angle=2,
+                    v_phi_phi_hidden=8, v_phi_theta_hidden=8,
+                    v_phi_mlp_hidden=16,
+                    mass_mode="global", ln_after_step=True,
+                    score_head_hidden=8,
+                    kernel_rank=4, kernel_init_scale=0.02,
+                    gyro_rank=4, gyro_init_scale=0.02,
+                    gamma_min=0.05,
+                    causal_force=True if causal is None else causal,
+                )
+                kwargs = _stage2_cell_kwargs(cell, base)
+                return SPHSPLMConfig(**kwargs)
+            return _cfg
 
-    for cell in SPHSPLM_CELLS:
-        out.append(ModelEntry(
-            f"sp_hsplm_stage2_{cell}",
-            _cfg_sphsplm_factory(cell),
-            ScalarPotentialLMSPHSPLM,
-        ))
+        for cell in SPHSPLM_CELLS:
+            out.append(ModelEntry(
+                f"sp_hsplm_stage2_{cell}",
+                _cfg_sphsplm_factory(cell),
+                ScalarPotentialLMSPHSPLM,
+            ))
+    except Exception:
+        pass
 
     # E9 SPLM with LayerNorm-after-step (has ln_eps / ln_affine fields).
     from model_ln import (  # type: ignore
@@ -291,34 +312,42 @@ def _registry() -> List[ModelEntry]:
     # First-order ablation (γ=∞, gradient flow). Same state_dict shape as
     # sarf_mass_ln but a different integrator class. Listed after _ln so
     # that LN ckpts go to the right class by default.
-    from model_first_order import (  # type: ignore
-        SPLMFirstOrderConfig, ScalarPotentialLMFirstOrder,
-    )
-
-    def _cfg_first_order(causal: Optional[bool]) -> object:
-        return SPLMFirstOrderConfig(
-            vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
-            mass_mode="global", ln_after_step=True,
-            causal_force=True if causal is None else causal,
+    # Optional extension variant — not shipped with paper_tmlr_1.
+    try:
+        from model_first_order import (  # type: ignore
+            SPLMFirstOrderConfig, ScalarPotentialLMFirstOrder,
         )
-    out.append(ModelEntry(
-        "first_order (gradient-flow)", _cfg_first_order, ScalarPotentialLMFirstOrder,
-    ))
+
+        def _cfg_first_order(causal: Optional[bool]) -> object:
+            return SPLMFirstOrderConfig(
+                vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
+                mass_mode="global", ln_after_step=True,
+                causal_force=True if causal is None else causal,
+            )
+        out.append(ModelEntry(
+            "first_order (gradient-flow)", _cfg_first_order, ScalarPotentialLMFirstOrder,
+        ))
+    except Exception:
+        pass
 
     # Symplectic / Verlet integrator.
-    from model_symplectic import (  # type: ignore
-        SPLMSymplecticConfig, ScalarPotentialLMSymplectic,
-    )
-
-    def _cfg_sym(causal: Optional[bool]) -> object:
-        return SPLMSymplecticConfig(
-            vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
-            mass_mode="global",
-            causal_force=True if causal is None else causal,
+    # Optional extension variant — not shipped with paper_tmlr_1.
+    try:
+        from model_symplectic import (  # type: ignore
+            SPLMSymplecticConfig, ScalarPotentialLMSymplectic,
         )
-    out.append(ModelEntry(
-        "symplectic (velocity-Verlet)", _cfg_sym, ScalarPotentialLMSymplectic,
-    ))
+
+        def _cfg_sym(causal: Optional[bool]) -> object:
+            return SPLMSymplecticConfig(
+                vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
+                mass_mode="global",
+                causal_force=True if causal is None else causal,
+            )
+        out.append(ModelEntry(
+            "symplectic (velocity-Verlet)", _cfg_sym, ScalarPotentialLMSymplectic,
+        ))
+    except Exception:
+        pass
 
     # SARF-mass variant (parent of every newer SPLM in this repo).
     from model_sarf_mass import (  # type: ignore
@@ -336,16 +365,20 @@ def _registry() -> List[ModelEntry]:
     ))
 
     # SARF (no mass head)
-    from model_sarf import SPLMSARFConfig, ScalarPotentialLMSARF  # type: ignore
+    # Optional extension variant — not shipped with paper_tmlr_1.
+    try:
+        from model_sarf import SPLMSARFConfig, ScalarPotentialLMSARF  # type: ignore
 
-    def _cfg_sarf(causal: Optional[bool]) -> object:
-        return SPLMSARFConfig(
-            vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
-            causal_force=True if causal is None else causal,
-        )
-    out.append(ModelEntry(
-        "sarf (no mass head)", _cfg_sarf, ScalarPotentialLMSARF,
-    ))
+        def _cfg_sarf(causal: Optional[bool]) -> object:
+            return SPLMSARFConfig(
+                vocab_size=257, d=16, max_len=64, v_hidden=32, v_depth=2, L=4,
+                causal_force=True if causal is None else causal,
+            )
+        out.append(ModelEntry(
+            "sarf (no mass head)", _cfg_sarf, ScalarPotentialLMSARF,
+        ))
+    except Exception:
+        pass
 
     return out
 

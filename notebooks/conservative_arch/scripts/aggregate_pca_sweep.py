@@ -13,17 +13,17 @@ and produces three aggregate artefacts:
     pca_sweep_gap_profile.png    per-layer gap as a function of PCA-k
     pca_sweep_verdict.md         §5.1 verdict + paper-edit implications
 
-The verdict logic implements the decision rule of
-`docs/SP_HSPLM_Stage_2_q9e_n_verdict_and_structural_reexamination.md` §5.1:
+The verdict logic implements the PCA-symmetry sweep decision rule
+(see `results/pca_sweep/README.md`):
 
-    H2 REJECTED   -- max layer gap stays <= 0.10 at every tested PCA-k;
+    REJECTED   -- max layer gap stays <= 0.10 at every tested PCA-k;
                      paper_tmlr_1 §7.2 PCA-16 finding is robust.
 
-    H2 PARTIAL    -- gap grows mildly with PCA-k; in (0.10, 0.20] at the
+    PARTIAL    -- gap grows mildly with PCA-k; in (0.10, 0.20] at the
                      largest tested PCA-k.  Paper edit: add a one-paragraph
                      scope-of-claim sharpening to §7.2.
 
-    H2 CONFIRMED  -- gap > 0.20 at the largest tested PCA-k.  Paper edit:
+    CONFIRMED  -- gap > 0.20 at the largest tested PCA-k.  Paper edit:
                      substantive rewrite of §7.2 and the introduction's
                      contribution claims.
 
@@ -233,11 +233,10 @@ def render_verdict_md(
 ) -> str:
     lines: List[str] = []
     lines.append("# PCA-symmetry sweep — verdict\n")
-    lines.append("Implements §5.1 of "
-                 "`docs/SP_HSPLM_Stage_2_q9e_n_verdict_and_structural_reexamination.md` "
-                 "applied to the PCA-dimension sweep on the per-token-internal "
+    lines.append("PCA-dimension sweep on the per-token-internal "
                  "velocity-aware Jacobian-symmetry test of "
-                 "`paper_tmlr_1` §7.2.\n")
+                 "`paper_tmlr_1` §7.2 (decision rule: see "
+                 "`results/pca_sweep/README.md`).\n")
     lines.append("## Per-architecture verdict\n")
     overall = "REJECTED"
     for arch in architectures:
@@ -286,12 +285,12 @@ def render_verdict_md(
                      "structural).")
     lines.append("")
 
-    lines.append("## Reference: §5.1 decision rule\n")
-    lines.append(f"- **H2 REJECTED** if max-layer gap stays "
+    lines.append("## Reference: decision rule\n")
+    lines.append(f"- **REJECTED** if max-layer gap stays "
                  f"<= {GAP_BAND_REJECT:.2f} at every tested PCA-k.")
-    lines.append(f"- **H2 PARTIAL** if max-layer gap at largest PCA-k "
+    lines.append(f"- **PARTIAL** if max-layer gap at largest PCA-k "
                  f"is in ({GAP_BAND_REJECT:.2f}, {GAP_BAND_PARTIAL:.2f}].")
-    lines.append(f"- **H2 CONFIRMED** if max-layer gap at largest PCA-k "
+    lines.append(f"- **CONFIRMED** if max-layer gap at largest PCA-k "
                  f"is > {GAP_BAND_PARTIAL:.2f}.")
     lines.append("")
     return "\n".join(lines)

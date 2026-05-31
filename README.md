@@ -82,9 +82,7 @@ paper_tmlr_1/
 │       ├── extract_*.py             # GPT-2 / matched-baseline extractors
 │       ├── plot_*.py                # §8.5 / §9 plotting
 │       ├── run_full_pipeline.py     # §8 end-to-end runner
-│       ├── ln_damping_sweep/        # §A.3 leak-free retrain
-│       └── scaleup/                 # §10 Discussion: multi-xi SPLM evidence
-│           └── colab_parf_multixi_h128.ipynb  # reproducible PPL experiment
+│       └── ln_damping_sweep/        # §A.3 leak-free retrain
 │
 ├── data/                          # placeholder; see data/README.md
 ├── checkpoints/                   # placeholder; see checkpoints/README.md
@@ -227,31 +225,6 @@ The forensic detail of the leak bug and its fix is documented at
 |---|---|---|
 | [`Causal_Leak_in_SPLM_Integrate_Bug_and_Fix.md`](docs/Causal_Leak_in_SPLM_Integrate_Bug_and_Fix.md) | Markdown | Forensic account of the causal-leak bug discovered in the original SPLM integrator and its fix; referenced in §A.3 of the paper. |
 | [`Deep_Dive_in_the_SPLM_model_and_code.docx`](docs/Deep_Dive_in_the_SPLM_model_and_code.docx) | Word / PDF | Detailed walkthrough of the SPLM model architecture, parameter notation, and codebase. Intended for reviewers and readers who want to map paper symbols (e.g. $V_\theta$, $\gamma$, $\alpha$, $\Delta h_\ell$) to their corresponding source-code identifiers and understand the implementation decisions. The PDF rendering is provided alongside for convenience. |
-
----
-
-## §10 Discussion: Multi-channel SPLM language-modelling evidence
-
-The Discussion (§10.4) references preliminary language-modelling results
-from an extended conservative architecture — a multi-channel SPLM with
-structured $V_\theta$ parameterisation (Multi-Xi PARFLM) — achieving
-approximately 14 PPL on TinyStories at $d{=}256$, $L{=}8$.  The
-reproducible Colab notebook is:
-
-```bash
-notebooks/conservative_arch/scaleup/colab_parf_multixi_h128.ipynb
-```
-
-This notebook clones the full model code from the companion development
-repository at runtime, trains the multi-channel SPLM on TinyStories
-(5M tokens), and reports the validation perplexity.  It runs in
-approximately 2 hours on a single A100 GPU.
-
-**Note:** This notebook and its underlying model code are not part of
-the paper's core claims (the three-way separator of §7–§9).  They
-provide independent verification of the forward-looking remark in §10.4
-regarding the practical language-modelling capacity of the conservative
-architecture family.
 
 ---
 

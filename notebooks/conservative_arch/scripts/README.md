@@ -15,10 +15,9 @@ in `paper_tmlr_1` §7.2, which is conducted at PCA-16 only.
 
 The sweep is **not** part of the paper as written; it is a follow-up
 robustness check whose outcome determines a small set of conditional
-paper edits before TMLR submission. The decision rule, hypothesis
-framework, and paper-update policy are all specified in
-[`docs/SP_HSPLM_Stage_2_q9e_n_verdict_and_structural_reexamination.md`](https://github.com/dimitarpg13/semsimula/blob/main/docs/SP_HSPLM_Stage_2_q9e_n_verdict_and_structural_reexamination.md)
-§5.1 in the main `semsimula` repository.
+paper edits before TMLR submission. The decision rule and paper-update
+policy are specified in
+[`../../../results/pca_sweep/README.md`](../../../results/pca_sweep/README.md).
 
 ## Files
 
@@ -40,13 +39,13 @@ framework, and paper-update policy are all specified in
 
 **Total: ≲ 30 min for GPT-2 + Pythia only; ≲ 1 h with all four architectures.**
 
-## Decision rule (verbatim from §5.1)
+## Decision rule
 
 | Outcome | Max-layer TEST gap at largest tested PCA-k | Paper-edit implication |
 |---|---|---|
-| **H2 REJECTED** | ≤ 0.10 | `paper_tmlr_1` §7.2 stands; optional 1-paragraph robustness footnote before submission. |
-| **H2 PARTIAL** | (0.10, 0.20] | One-paragraph scope-of-claim sharpening to §7.2. |
-| **H2 CONFIRMED** | > 0.20 | Substantive rewrite of §7.2 framing and the introduction's contribution claims. The §8 three-way separator headline (*R²* = 0.949 / 0.56 / 0.45) is unaffected and in fact *strengthens* under this reading. |
+| **REJECTED** | ≤ 0.10 | `paper_tmlr_1` §7.2 stands; optional 1-paragraph robustness footnote before submission. |
+| **PARTIAL** | (0.10, 0.20] | One-paragraph scope-of-claim sharpening to §7.2. |
+| **CONFIRMED** | > 0.20 | Substantive rewrite of §7.2 framing and the introduction's contribution claims. The §8 three-way separator headline (*R²* = 0.949 / 0.56 / 0.45) is unaffected and in fact *strengthens* under this reading. |
 
 The §5.1 verdict for the paper-edit cycle is determined by the **GPT-2 small** row alone. The remaining architectures, if present, sharpen the diagnosis but do not change the binary classification.
 

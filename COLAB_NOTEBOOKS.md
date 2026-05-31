@@ -2,9 +2,8 @@
 
 All Colab-ready notebooks mount Google Drive for persistent output and
 auto-detect the available GPU (CUDA preferred, MPS/CPU fallback).
-The §7–§9 notebooks clone from
-`https://github.com/dimitarpg13/paper_tmlr_1.git`; the §10 multi-xi
-SPLM notebook clones the companion development repository.  All are
+All Colab notebooks clone this repository
+(`https://github.com/dimitarpg13/paper_tmlr_1.git`). All are
 **dual-mode**: they run unchanged in a local checkout, writing results
 to local `results/` directories instead of GDrive.
 
@@ -86,37 +85,6 @@ from GDrive / local checkpoints.
 ≲1 h with all four architectures on H100.
 
 **GDrive output:** `paper_tmlr_1_pca_sweep/`
-
----
-
----
-
-### colab_parf_multixi_h128
-
-**Path:** `notebooks/conservative_arch/scaleup/colab_parf_multixi_h128.ipynb`
-
-Reproduces the preliminary language-modelling result cited in the
-Discussion (§10.4): a multi-channel SPLM with structured $V_\theta$
-parameterisation (Multi-Xi PARFLM) achieving approximately 14 PPL on
-TinyStories.  This notebook is not part of the paper's core claims
-(the three-way separator of §7–§9); it provides independent
-verification of the forward-looking remark about the practical
-capacity of the conservative architecture family.
-
-The notebook clones the companion development repository at runtime
-and trains a 12-arm parameter sweep over context-channel count ($K$),
-$\alpha$-initialisation strategy, $V_\phi$ kind, and routing density.
-Each arm runs for 8,000 steps on TinyStories (5M tokens).
-
-| Baseline | PPL |
-|----------|-----|
-| Multi-ξ PARF H=128 (best, K=8) | 12.06 |
-| Multi-ξ SPLM (no PARF) | 14.69 |
-| Attention baseline | 7.81 |
-
-**GPU:** A100 40GB / H100 80GB.  Budget: ~2 h per arm on A100.
-
-**GDrive output:** `semsimula_parf_multixi_h128/`
 
 ---
 
